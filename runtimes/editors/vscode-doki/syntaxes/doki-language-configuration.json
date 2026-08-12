@@ -1,0 +1,42 @@
+{
+    "comments": {
+        "blockComment": ["{#", "#}"]
+    },
+    "brackets": [["{", "}"], ["[", "]"], ["(", ")"]],
+    "autoClosingPairs": [
+        { "open": "{", "close": "}" },
+        { "open": "[", "close": "]" },
+        { "open": "(", "close": ")" },
+        { "open": "\"", "close": "\"", "notIn": ["string"] },
+        { "open": "'", "close": "'", "notIn": ["string"] },
+        { "open": "`", "close": "`", "notIn": ["string"] }
+    ],
+    "surroundingPairs": [
+        ["{", "}"],
+        ["[", "]"],
+        ["(", ")"],
+        ["\"", "\""],
+        ["'", "'"],
+        ["`", "`"]
+    ],
+    "folding": {
+        "markers": {
+            "start": "^\\s*\\{%\\s*(if|loop|match|micro|block|prepend|append)\\b",
+            "end": "^\\s*\\{%\\s*end\\s+(if|loop|match|micro|block|prepend|append)\\s*%\\}"
+        }
+    },
+    "indentationRules": {
+        "increaseIndentPattern": "\\{%\\s*(if|else|else if|loop|match|case|micro|block|prepend|append)\\b[^%]*%\\}",
+        "decreaseIndentPattern": "\\{%\\s*(end\\s+(if|loop|match|micro|block|prepend|append)|else|case)\\b[^%]*%\\}"
+    },
+    "onEnterRules": [
+        {
+            "beforeText": "\\{%\\s*(if|else|else if|loop|match|case|micro|block|prepend|append)\\b[^%]*%\\}",
+            "afterText": "\\{%\\s*end\\s+(if|loop|match|micro|block|prepend|append)\\s*%\\}",
+            "action": {
+                "indent": "indentOutdent"
+            }
+        }
+    ],
+    "wordPattern": "[a-zA-Z_][a-zA-Z0-9_]*"
+}

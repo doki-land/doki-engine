@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doki.land/schemas/doki.plugin.schema.json",
+  "title": "Doki plugin manifest (doki.plugin.json or package.json doki field)",
+  "description": "Same manifest for local path plugins and npm packages. Production loads entry; development may use developmentEntry for path/workspace sources only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "apiVersion", "entry"],
+  "properties": {
+    "kind": {
+      "const": "plugin"
+    },
+    "apiVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Plugin API major version as decimal string, e.g. \"1\""
+    },
+    "entry": {
+      "type": "string",
+      "description": "ESM JavaScript entry relative to the package root (publishable artifact)"
+    },
+    "developmentEntry": {
+      "type": "string",
+      "description": "Optional TS/JS source for doki dev (path/workspace only). Ignored for registry packages and for doki build by default."
+    },
+    "manifest": {
+      "type": "string",
+      "description": "Optional path to an external doki.plugin.json if the package.json doki field only points here"
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "validateConfig",
+          "discoverContent",
+          "transformContent",
+          "generateContent",
+          "contributeContext",
+          "transformAsset",
+          "contributeArtifacts",
+          "buildComplete",
+          "contributeClientEntries"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Declared capability tags for audit (not a sandbox)"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "filesystem": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "network": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "environment": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "subprocess": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "configSchema": {
+      "type": "string",
+      "description": "Path to JSON Schema for plugin options"
+    },
+    "deterministic": {
+      "type": "boolean",
+      "default": true
+    },
+    "cacheable": {
+      "type": "boolean",
+      "default": true
+    },
+    "apply": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["dev", "build", "check"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["dev", "build", "check"]
+          },
+          "uniqueItems": true
+        }
+      ]
+    },
+    "enforce": {
+      "type": "string",
+      "enum": ["pre", "normal", "post"],
+      "default": "normal"
+    }
+  }
+}

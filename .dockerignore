@@ -1,0 +1,6 @@
+# Context for release Docker builds is the portable deploy dir, not the monorepo root.
+node_modules
+npm-debug.log*
+.git
+.gitignore
+*.md

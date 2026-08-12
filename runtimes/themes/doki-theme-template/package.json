@@ -1,0 +1,22 @@
+{
+    "name": "{{fullName}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "main": "theme.toml",
+    "files": [
+        "theme.toml",
+        "templates",
+        "static",
+        "shortcodes"
+    ],
+    "keywords": [
+        "doki",
+        "doki-engine",
+        "theme"
+    ],
+    "author": "{{author}}",
+    "peerDependencies": {
+        "@doki-land/doki-engine": "^1.0.0"
+    },
+    "license": "MIT"
+}

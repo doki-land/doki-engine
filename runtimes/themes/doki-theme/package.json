@@ -1,0 +1,32 @@
+{
+  "name": "@doki-land/doki-theme",
+  "version": "0.0.0",
+  "description": "defineTheme helpers for Doki themes (no build semantics)",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doki-land/doki-engine.git",
+    "directory": "runtimes/themes/doki-theme"
+  }
+}

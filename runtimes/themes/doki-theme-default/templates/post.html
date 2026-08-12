@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<article class="post">
+    <h1>{% page.title %}</h1>
+    <div class="post-meta">
+        By {% page.author %} on {% page.date %}
+    </div>
+    <div class="categories">
+        <span class="category">{% page.category %}</span>
+    </div>
+    <div class="tags">
+        {% loop tag in page.tags %}
+        <span class="tag">{% tag %}</span>
+        {% end loop %}
+    </div>
+    <div class="content">
+        {% content |> raw %}
+    </div>
+</article>
+{% end block %}

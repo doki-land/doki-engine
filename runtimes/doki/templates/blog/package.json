@@ -1,0 +1,12 @@
+{
+  "name": "my-doki-blog",
+  "private": true,
+  "scripts": {
+    "dev": "doki dev",
+    "build": "doki build",
+    "check": "doki check"
+  },
+  "devDependencies": {
+    "@doki-land/doki": "0.0.0"
+  }
+}

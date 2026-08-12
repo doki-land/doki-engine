@@ -1,0 +1,5 @@
+name = "default"
+version = "1.0.0"
+description = "Default theme for Doki Engine"
+author = "Doki Engine"
+license = "MIT"

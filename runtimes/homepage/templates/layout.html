@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="{% site.lang %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% site.description %}">
+  <meta name="theme-color" content="#151914">
+  <title>{% if page.title %}{% page.title %}&nbsp;—&nbsp;{% end if %}{% site.title %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="site-frame">
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="wordmark" href="/" aria-label="Doki home"><span class="wordmark-symbol">D</span><span>Doki</span></a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="/#how-it-works">How it works</a>
+          <a href="/#ecosystem">Ecosystem</a>
+          <a href="https://github.com/doki-engine/doki-engine">Community</a>
+          <a href="/docs/quickstart/">Docs</a>
+        </nav>
+        <a class="topbar-action" href="/docs/quickstart/">Start a site <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+
+    <main>{% block content %}{% content %}{% end block %}</main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <a class="wordmark wordmark-footer" href="/"><span class="wordmark-symbol">D</span><span>Doki</span></a>
+          <p>File-first publishing for teams, communities, and the open web.</p>
+        </div>
+        <div class="footer-links">
+          <div><span class="footer-label">EXPLORE</span><a href="/docs/quickstart/">Quickstart</a><a href="/#ecosystem">Ecosystem</a></div>
+          <div><span class="footer-label">PROJECTS</span><a href="https://github.com/doki-engine/doki-engine">GitHub</a><a href="/docs/guide/themes-plugins/">Themes &amp; plugins</a></div>
+        </div>
+      </div>
+      <div class="container footer-bottom"><span>© Doki Land</span><span class="footer-signal">content → template → site</span></div>
+    </footer>
+  </div>
+</body>
+</html>

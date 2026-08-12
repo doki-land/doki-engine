@@ -1,0 +1,20 @@
+{
+    "name": "doki-docs-site-example",
+    "version": "1.0.0",
+    "description": "A documentation site example using Doki Engine",
+    "main": "index.js",
+    "scripts": {
+        "build": "doki build",
+        "serve": "doki serve"
+    },
+    "keywords": [
+        "doki",
+        "docs-site",
+        "example"
+    ],
+    "author": "Doki Engine Team",
+    "license": "MIT",
+    "devDependencies": {
+        "doki-engine": "file:../../frontends/doki-engine"
+    }
+}

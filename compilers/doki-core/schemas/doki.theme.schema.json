@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doki.land/schemas/doki.theme.schema.json",
+  "title": "Doki theme manifest (doki.theme.json)",
+  "description": "Declarative theme resources by default. Optional plugin entry runs theme code with the same plugin API.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["templates"],
+  "properties": {
+    "templates": {
+      "type": "string",
+      "description": "Directory of templates relative to the theme package root"
+    },
+    "assets": {
+      "type": "string",
+      "description": "Static theme assets directory"
+    },
+  "layouts": {
+    "type": "object",
+    "additionalProperties": {
+      "type": "string"
+    },
+    "description": "Logical layout name → template path within templates/"
+  },
+  "defaults": {
+    "type": "string",
+    "description": "Optional path to doki.defaults.toml (default: doki.defaults.toml at theme root)"
+  },
+  "configSchema": {
+      "type": "string",
+      "description": "JSON Schema for theme options in doki.toml"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Named client entry id → source path (e.g. .ts). Built via doki-bundler when that capability ships."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "@doki-land/doki-core",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Private N-API build workspace for @doki-land/doki (not published)",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "napi build --platform --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+    "build:debug": "napi build --platform --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+    "build:release": "napi build --platform --release --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+    "test": "node --test test/*.test.cjs",
+    "pack:smoke": "node ./scripts/pack-smoke.mjs",
+    "artifacts": "napi artifacts"
+  },
+  "napi": {
+    "binaryName": "doki-core",
+    "packageName": "@doki-land/doki",
+    "targets": [
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc",
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-musl"
+    ]
+  },
+  "optionalDependencies": {
+    "@doki-land/doki-win32-x64": "0.0.0",
+    "@doki-land/doki-win32-arm64": "0.0.0",
+    "@doki-land/doki-darwin-x64": "0.0.0",
+    "@doki-land/doki-darwin-arm64": "0.0.0",
+    "@doki-land/doki-linux-x64-gnu": "0.0.0",
+    "@doki-land/doki-linux-arm64-gnu": "0.0.0",
+    "@doki-land/doki-linux-x64-musl": "0.0.0",
+    "@doki-land/doki-linux-arm64-musl": "0.0.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "my-doki-site",
+  "private": true,
+  "scripts": {
+    "dev": "doki dev",
+    "build": "doki build",
+    "check": "doki check",
+    "inspect": "doki inspect config"
+  },
+  "devDependencies": {
+    "@doki-land/doki": "0.0.0"
+  }
+}

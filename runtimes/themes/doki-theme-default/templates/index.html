@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Recent Posts</h2>
+<ul class="posts">
+    {% loop post in pages %}
+    <li>
+        <article>
+            <h3><a href="{% post.url %}">{% post.title %}</a></h3>
+            <div class="post-meta">
+                By {% post.author %} on {% post.date %}
+            </div>
+            <div class="post-excerpt">
+                {% post.description %}
+            </div>
+            <div class="post-tags">
+                {% loop tag in post.tags %}
+                <span class="tag">{% tag %}</span>
+                {% end loop %}
+            </div>
+        </article>
+    </li>
+    {% end loop %}
+</ul>
+{% end block %}

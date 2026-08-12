@@ -1,0 +1,24 @@
+{
+    "name": "doki-player",
+    "version": "0.0.0",
+    "description": "Web Component-based music player for Doki Engine",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "keywords": [
+        "web-component",
+        "music-player",
+        "doki-engine"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "vite": "^5.0.0",
+        "typescript": "^5.0.0",
+        "@types/node": "^20.0.0"
+    }
+}

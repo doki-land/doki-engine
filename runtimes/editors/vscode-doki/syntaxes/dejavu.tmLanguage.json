@@ -1,0 +1,320 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Dejavu",
+    "scopeName": "text.html.dejavu",
+    "fileTypes": ["dejavu"],
+    "patterns": [
+        {
+            "include": "#comment"
+        },
+        {
+            "include": "#output"
+        },
+        {
+            "include": "#block"
+        },
+        {
+            "include": "text.html.basic"
+        }
+    ],
+    "repository": {
+        "comment": {
+            "name": "comment.block.dejavu",
+            "begin": "<#",
+            "end": "#>",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.begin.dejavu"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.end.dejavu"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "comment.block.documentation.dejavu",
+                    "match": "."
+                }
+            ]
+        },
+        "output": {
+            "name": "meta.template.output.dejavu",
+            "begin": "<%=",
+            "end": "%>",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.output.begin.dejavu"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.output.end.dejavu"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "block": {
+            "name": "meta.template.block.dejavu",
+            "begin": "<%(?!=)",
+            "end": "%>",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.block.begin.dejavu"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.block.end.dejavu"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#statement"
+                }
+            ]
+        },
+        "statement": {
+            "patterns": [
+                {
+                    "name": "keyword.control.dejavu",
+                    "match": "\\b(if|else|end|loop|block|extends|let|micro|match|case|using|namespace|break|continue|prepend|append|super)\\b"
+                },
+                {
+                    "name": "keyword.control.conditional.dejavu",
+                    "match": "\\belse\\s+if\\b"
+                },
+                {
+                    "name": "keyword.control.loop.dejavu",
+                    "match": "\\bin\\b"
+                },
+                {
+                    "name": "constant.language.boolean.dejavu",
+                    "match": "\\b(true|false)\\b"
+                },
+                {
+                    "name": "constant.language.null.dejavu",
+                    "match": "\\bnull\\b"
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "expression": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.dejavu",
+                    "begin": "\"",
+                    "end": "\"",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.dejavu",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.dejavu",
+                    "begin": "'",
+                    "end": "'",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.dejavu",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.template.dejavu",
+                    "begin": "`",
+                    "end": "`",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.dejavu",
+                            "match": "\\\\."
+                        },
+                        {
+                            "name": "meta.template.expression.dejavu",
+                            "begin": "\\$\\{",
+                            "end": "\\}",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.template-expression.begin.dejavu"
+                                }
+                            },
+                            "endCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.template-expression.end.dejavu"
+                                }
+                            },
+                            "patterns": [
+                                {
+                                    "include": "#expression"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "constant.numeric.dejavu",
+                    "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
+                },
+                {
+                    "name": "keyword.operator.arithmetic.dejavu",
+                    "match": "(\\+|\\-|\\*|\\/|\\%)"
+                },
+                {
+                    "name": "keyword.operator.comparison.dejavu",
+                    "match": "(\\=\\=|\\!\\=|\\<|\\>|\\<\\=|\\>\\=)"
+                },
+                {
+                    "name": "keyword.operator.logical.dejavu",
+                    "match": "(\\&\\&|\\|\\||\\!)"
+                },
+                {
+                    "name": "keyword.operator.assignment.dejavu",
+                    "match": "(\\=|\\+\\=|\\-\\=|\\*\\=|\\/\\=|\\%\\=)"
+                },
+                {
+                    "name": "keyword.operator.bitwise.dejavu",
+                    "match": "(\\&|\\||\\^|\\~|\\<\\<|\\>\\>|\\>\\>\\>)"
+                },
+                {
+                    "name": "keyword.operator.range.dejavu",
+                    "match": "\\.\\."
+                },
+                {
+                    "name": "punctuation.separator.pipe.dejavu",
+                    "match": "\\|"
+                },
+                {
+                    "name": "variable.other.readwrite.dejavu",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+                },
+                {
+                    "name": "meta.function-call.dejavu",
+                    "begin": "(\\b[a-zA-Z_][a-zA-Z0-9_]*\\b)(\\()",
+                    "end": "\\)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.dejavu"
+                        },
+                        "2": {
+                            "name": "punctuation.section.parens.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "punctuation.section.parens.dejavu",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.brackets.dejavu",
+                    "begin": "\\[",
+                    "end": "\\]",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.brackets.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.brackets.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.braces.dejavu",
+                    "begin": "\\{",
+                    "end": "\\}",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.braces.begin.dejavu"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.braces.end.dejavu"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "punctuation.separator.dejavu",
+                    "match": "[,.:]"
+                }
+            ]
+        }
+    }
+}

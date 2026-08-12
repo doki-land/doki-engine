@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doki.land/schemas/doki-toml.schema.json",
+  "title": "Doki project configuration (doki.toml logical model)",
+  "description": "Target project model after Figment merge. Relative path fields resolve against the project root that contains doki.toml, not the process cwd. Theme/plugin sources use explicit path or package — never a single ambiguous string.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Site title"
+    },
+    "description": {
+      "type": "string"
+    },
+    "base_url": {
+      "type": "string",
+      "description": "Canonical site base URL (no trailing path requirements beyond product rules)"
+    },
+    "lang": {
+      "type": "string",
+      "default": "en"
+    },
+    "author": {
+      "type": "string"
+    },
+    "content_dir": {
+      "type": "string",
+      "default": "content",
+      "description": "Content root relative to project root"
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "dist"
+    },
+    "public_dir": {
+      "type": "string",
+      "default": "public",
+      "description": "Static files copied as-is (replaces legacy static_dir naming)"
+    },
+    "data_dir": {
+      "type": "string",
+      "default": "data"
+    },
+    "theme": {
+      "$ref": "#/$defs/ExtensionRef"
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PluginEntry"
+      },
+      "description": "Explicitly enabled plugins only; directories under plugins/ are never auto-executed"
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/OverrideTarget"
+      },
+      "description": "Map package name → local path (or other override). Production/CI must record final resolution in the build manifest."
+    },
+    "incremental": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": ["title"],
+  "$defs": {
+    "ExtensionRef": {
+      "type": "object",
+      "description": "Exactly one of path or package must be set.",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Filesystem path relative to project root (or absolute if policy allows)"
+        },
+        "package": {
+          "type": "string",
+          "description": "npm package name (registry or workspace link)"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["path"],
+          "not": {
+            "required": ["package"]
+          }
+        },
+        {
+          "required": ["package"],
+          "not": {
+            "required": ["path"]
+          }
+        }
+      ]
+    },
+    "PluginEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "package": { "type": "string" },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "options": {
+          "type": "object",
+          "description": "Passed through schema validation for the plugin; opaque to the core beyond JSON-compatible values"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["path"],
+          "not": {
+            "required": ["package"]
+          }
+        },
+        {
+          "required": ["package"],
+          "not": {
+            "required": ["path"]
+          }
+        }
+      ]
+    },
+    "OverrideTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": ["path"]
+    }
+  },
+  "examples": [
+    {
+      "title": "产品文档",
+      "base_url": "https://docs.example.com",
+      "content_dir": "content",
+      "output_dir": "dist",
+      "theme": {
+        "path": "./themes/docs"
+      },
+      "plugins": [
+        {
+          "path": "./plugins/related-pages",
+          "options": {
+            "limit": 6
+          }
+        },
+        {
+          "package": "@doki-land/doki-plugin-search",
+          "enabled": true,
+          "options": {
+            "languages": ["zh-CN", "en"]
+          }
+        }
+      ]
+    }
+  ]
+}

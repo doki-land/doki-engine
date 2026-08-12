@@ -1,0 +1,273 @@
+# Publish current Doki npm surface (OIDC Trusted Publishing).
+#
+# npmjs Trusted Publisher (each package):
+#   Organization: doki-land
+#   Repository:   doki-engine
+#   Workflow:     release-npm.yml    ? filename only, not a path
+#   Environment:  (leave empty unless you add a GitHub Environment)
+#
+# Surface:
+#   @doki-land/doki-plugin, @doki-land/doki-theme
+#   @doki-land/doki-<sys>   (Windows: no -msvc)
+#   @doki-land/doki
+#
+# Never publishes @doki-land/doki-core (private napi workspace) or legacy compilers/*.
+#
+# Trigger: tag vX.Y.Z  or  workflow_dispatch(version=X.Y.Z)
+# First real CI versions should be > 0.0.0 (0.0.0 is Trusted Publishing stub).
+
+name: release-npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (no leading v). Use >0.0.0 after stubs."
+        required: true
+        default: "0.0.1"
+
+concurrency:
+  group: release-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - id: ver
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+            echo "Version must be X.Y.Z (got: $VERSION)" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version $VERSION"
+
+  build-native:
+    needs: resolve-version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Host OS compilers only ? no extra apt "toolchain" for gnu Linux.
+          - os: windows-latest
+            host: win32-x64-msvc
+            rust_target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            host: win32-arm64-msvc
+            rust_target: aarch64-pc-windows-msvc
+          - os: macos-latest
+            host: darwin-arm64
+            rust_target: aarch64-apple-darwin
+          - os: macos-13
+            host: darwin-x64
+            rust_target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            host: linux-x64-gnu
+            rust_target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            host: linux-arm64-gnu
+            rust_target: aarch64-unknown-linux-gnu
+          # musl: Alpine container on x64 only (JS Actions unsupported in Alpine on Arm64).
+          - os: ubuntu-latest
+            host: linux-x64-musl
+            rust_target: x86_64-unknown-linux-musl
+            container: node:20-alpine
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout doki-engine
+        uses: actions/checkout@v4
+        with:
+          path: doki-engine
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'dev' || github.ref }}
+
+      - name: Checkout dejavu-language (Cargo path dep)
+        uses: actions/checkout@v4
+        with:
+          repository: doki-land/dejavu-language
+          ref: dev
+          path: dejavu-language
+
+      - name: Alpine build deps (musl hosts only)
+        if: contains(matrix.host, 'musl')
+        run: |
+          set -euo pipefail
+          apk add --no-cache bash curl build-base python3 git
+          # Rust via rustup inside Alpine ? links against musl by default.
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js (non-container hosts)
+        if: ${{ !matrix.container }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Rust (non-container hosts)
+        if: ${{ !matrix.container }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Add Rust target (Alpine)
+        if: contains(matrix.host, 'musl')
+        run: rustup target add ${{ matrix.rust_target }}
+
+      - name: Install napi workspace deps
+        working-directory: doki-engine/compilers/doki-node
+        run: npm install --no-optional
+
+      - name: Build release .node
+        working-directory: doki-engine/compilers/doki-node
+        run: npm run build:release -- --target ${{ matrix.rust_target }}
+
+      - name: Upload platform binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-doki-core-${{ matrix.host }}
+          path: doki-engine/compilers/doki-node/doki-core.${{ matrix.host }}.node
+          if-no-files-found: error
+
+  publish:
+    needs: [resolve-version, build-native]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'dev' || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: npm CLI for OIDC Trusted Publishing
+        run: npm install -g npm@^11.5.1
+
+      - name: Download all platform binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-doki-core-*
+          path: artifacts
+          merge-multiple: false
+
+      - name: Align versions + stage .node into platform packages
+        env:
+          VERSION: ${{ needs.resolve-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/set-release-version.mjs "$VERSION"
+          node scripts/prepare-npm-publish.mjs
+          expected=0
+          staged=0
+          for dir in artifacts/release-doki-core-*; do
+            [ -d "$dir" ] || continue
+            expected=$((expected + 1))
+            host="${dir#artifacts/release-doki-core-}"
+            node_file="$(find "$dir" -name "doki-core.${host}.node" | head -n1)"
+            test -n "$node_file"
+            npm_dir="$(node --input-type=module -e "
+              import { findPlatformByHost } from './scripts/doki-release-packages.mjs';
+              const p = findPlatformByHost(process.argv[1]);
+              if (!p) process.exit(2);
+              console.log(p.npmDir);
+            " "$host")"
+            mkdir -p "compilers/doki-node/npm/${npm_dir}"
+            cp "$node_file" "compilers/doki-node/npm/${npm_dir}/doki-core.${host}.node"
+            staged=$((staged + 1))
+            echo "staged $host -> npm/${npm_dir}"
+          done
+          echo "staged $staged / expected $expected platform binaries"
+          test "$staged" -ge 6
+
+      - name: Guard ? refuse wrong package versions
+        env:
+          WANT: ${{ needs.resolve-version.outputs.version }}
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs'
+          const want = process.env.WANT
+          const pkgs = [
+            'runtimes/plugins/doki-plugin/package.json',
+            'runtimes/themes/doki-theme/package.json',
+            'runtimes/doki/package.json',
+          ]
+          for (const p of pkgs) {
+            const j = JSON.parse(fs.readFileSync(p, 'utf8'))
+            if (j.version !== want) {
+              console.error(p, j.version, '!=', want)
+              process.exit(1)
+            }
+            console.log(`${j.name}@${j.version}`)
+          }
+          EOF
+
+      - name: Stage native loader into @doki-land/doki
+        run: node scripts/stage-doki-native.mjs
+
+      - name: Publish to npm (OIDC ? no NPM_TOKEN)
+        run: |
+          set -euo pipefail
+          publish_one() {
+            local dir="$1"
+            local name version out status
+            name="$(node -p "require('./${dir}/package.json').name")"
+            version="$(node -p "require('./${dir}/package.json').version")"
+            echo "::group::npm publish ${name}@${version} (${dir})"
+            set +e
+            out="$(cd "$dir" && npm publish --access public 2>&1)"
+            status=$?
+            set -e
+            printf '%s\n' "$out"
+            if [ "$status" -eq 0 ]; then
+              echo "published ${name}@${version}"
+              echo "::endgroup::"
+              return 0
+            fi
+            if printf '%s\n' "$out" | grep -Eqi \
+              'cannot publish over|previously published|EPUBLISHCONFLICT|You cannot publish over the previously published versions'; then
+              echo "::notice::${name}@${version} already on npm ? skip"
+              echo "::endgroup::"
+              return 0
+            fi
+            echo "::error::npm publish failed for ${name}@${version}"
+            echo "::endgroup::"
+            return "$status"
+          }
+
+          failed=0
+          for d in compilers/doki-node/npm/*; do
+            if [ -f "$d/package.json" ] && ls "$d"/*.node >/dev/null 2>&1; then
+              publish_one "$d" || failed=1
+            else
+              echo "::warning::skip $d (no staged .node)"
+            fi
+          done
+          publish_one runtimes/plugins/doki-plugin || failed=1
+          publish_one runtimes/themes/doki-theme || failed=1
+          publish_one runtimes/doki || failed=1
+          exit "$failed"

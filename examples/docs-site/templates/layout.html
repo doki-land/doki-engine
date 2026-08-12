@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="{% site.lang %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% page.title %} - {% site.title %}</title>
+    <meta name="description" content="{% page.description |> default: site.description %}">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><a href="/">{% site.title %}</a></h1>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/quick-start">Quick Start</a></li>
+                <li><a href="/installation">Installation</a></li>
+                <li><a href="/usage">Usage</a></li>
+                <li><a href="/api-reference">API Reference</a></li>
+            </ul>
+        </div>
+    </nav>
+    <main>
+        <div class="container">
+            <div class="sidebar">
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/quick-start">Quick Start</a></li>
+                    <li><a href="/installation">Installation</a></li>
+                    <li><a href="/usage">Usage</a></li>
+                    <li><a href="/api-reference">API Reference</a></li>
+                </ul>
+            </div>
+            <div class="content">
+                {% block content %}{% end block %}
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; {% now |> date: '%Y' %} {% site.author %}. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

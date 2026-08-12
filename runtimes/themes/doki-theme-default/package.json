@@ -1,0 +1,13 @@
+{
+    "name": "@doki/theme-default",
+    "version": "0.0.0",
+    "description": "Default theme for Doki Engine",
+    "author": "Doki Engine",
+    "license": "MIT",
+    "type": "module",
+    "keywords": [
+        "doki",
+        "theme",
+        "static-site"
+    ]
+}

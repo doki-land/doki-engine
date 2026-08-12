@@ -1,0 +1,24 @@
+[site]
+title = "Doki"
+description = "A publishing ecosystem for blogs, docs, magazines, and long-lived sites."
+author = "Doki Land"
+url = "https://doki.land"
+lang = "zh-CN"
+type = "docs"
+default_language = "zh-CN"
+languages = ["zh-CN"]
+
+[build]
+input_dir = "content"
+output_dir = "dist"
+static_dir = "static"
+data_dir = "data"
+incremental = false
+
+[template]
+engine = "doki"
+dir = "templates"
+layout = "layout"
+
+[sitemap]
+enabled = true

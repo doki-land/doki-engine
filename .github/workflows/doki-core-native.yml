@@ -1,0 +1,251 @@
+# Build & smoke-test @doki-land/doki-core native addon on multiple platforms.
+#
+# Requires sibling checkout of dejavu-language (Cargo path dep).
+# Does not publish; packs local tarballs and verifies require()+unicode paths.
+
+name: doki-core-native
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "compilers/doki-core/**"
+      - "compilers/doki-node/**"
+      - "runtimes/doki/**"
+      - "runtimes/plugins/doki-plugin/**"
+      - "runtimes/themes/doki-theme/**"
+      - "scripts/doki-release-packages.mjs"
+      - "scripts/smoke-publish-doki.mjs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/doki-core-native.yml"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "compilers/doki-core/**"
+      - "compilers/doki-node/**"
+      - "runtimes/doki/**"
+      - "runtimes/plugins/doki-plugin/**"
+      - "runtimes/themes/doki-theme/**"
+      - "scripts/doki-release-packages.mjs"
+      - "Cargo.toml"
+      - ".github/workflows/doki-core-native.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: doki-core-native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guard-no-node-in-git:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse tracked *.node binaries
+        run: |
+          set -euo pipefail
+          hits="$(git ls-files '*.node' '**/*.node' || true)"
+          if [ -n "$hits" ]; then
+            echo "Tracked .node files must not be committed:" >&2
+            echo "$hits" >&2
+            exit 1
+          fi
+          echo "ok: no *.node in git index"
+
+  native:
+    needs: guard-no-node-in-git
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            host: win32-x64-msvc
+            rust_target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            host: win32-arm64-msvc
+            rust_target: aarch64-pc-windows-msvc
+          - os: macos-latest
+            host: darwin-arm64
+            rust_target: aarch64-apple-darwin
+          - os: macos-13
+            host: darwin-x64
+            rust_target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            host: linux-x64-gnu
+            rust_target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            host: linux-arm64-gnu
+            rust_target: aarch64-unknown-linux-gnu
+          # musl: Alpine on x64 only (JS Actions unsupported in Alpine on Arm64).
+          - os: ubuntu-latest
+            host: linux-x64-musl
+            rust_target: x86_64-unknown-linux-musl
+            container: node:20-alpine
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: doki-engine
+
+    steps:
+      - name: Checkout doki-engine
+        uses: actions/checkout@v4
+        with:
+          path: doki-engine
+
+      - name: Checkout dejavu-language (path dep)
+        uses: actions/checkout@v4
+        with:
+          repository: doki-land/dejavu-language
+          ref: dev
+          path: dejavu-language
+
+      - name: Alpine build deps (musl hosts only)
+        if: contains(matrix.host, 'musl')
+        working-directory: .
+        run: |
+          set -euo pipefail
+          apk add --no-cache bash curl build-base python3 git
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        if: ${{ !matrix.container }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Rust
+        if: ${{ !matrix.container }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Add Rust target (Alpine)
+        if: contains(matrix.host, 'musl')
+        working-directory: .
+        run: rustup target add ${{ matrix.rust_target }}
+
+      - name: Install doki-node npm deps (skip unpublished optional platform pkgs)
+        working-directory: doki-engine/compilers/doki-node
+        run: npm install --no-optional
+
+      - name: Build native addon
+        working-directory: doki-engine/compilers/doki-node
+        run: npm run build -- --target ${{ matrix.rust_target }}
+
+      - name: Assert .node present
+        working-directory: doki-engine/compilers/doki-node
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la *.node || true
+          test -f "doki-core.${{ matrix.host }}.node" || {
+            echo "expected doki-core.${{ matrix.host }}.node" >&2
+            ls -la >&2
+            exit 1
+          }
+
+      - name: Session + unicode path smoke
+        working-directory: doki-engine/compilers/doki-node
+        run: npm test
+
+      - name: Pack smoke (loader manifest)
+        working-directory: doki-engine/compilers/doki-node
+        run: npm run pack:smoke
+
+      - name: Stage platform package + local tarball install smoke
+        working-directory: doki-engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="${{ matrix.host }}"
+          NODE_FILE="compilers/doki-node/doki-core.${HOST}.node"
+          NPM_DIR="$(node --input-type=module -e "import { findPlatformByHost } from './scripts/doki-release-packages.mjs'; const p=findPlatformByHost(process.argv[1]); if(!p) process.exit(2); console.log(p.npmDir)" "$HOST")"
+          PLAT_DIR="compilers/doki-node/npm/${NPM_DIR}"
+          mkdir -p "$PLAT_DIR"
+          cp "$NODE_FILE" "$PLAT_DIR/doki-core.${HOST}.node"
+          node scripts/set-release-version.mjs 0.0.0
+          node scripts/stage-doki-native.mjs
+          PACK="$(mktemp -d)"
+          (cd runtimes/plugins/doki-plugin && npm pack --pack-destination "$PACK")
+          (cd runtimes/themes/doki-theme && npm pack --pack-destination "$PACK")
+          (cd "$PLAT_DIR" && npm pack --pack-destination "$PACK")
+          (cd runtimes/doki && npm pack --pack-destination "$PACK")
+          DOKI_TGZ="$(ls "$PACK"/doki-land-doki-0.0.0.tgz)"
+          PLUGIN_TGZ="$(ls "$PACK"/doki-land-doki-plugin-0.0.0.tgz)"
+          THEME_TGZ="$(ls "$PACK"/doki-land-doki-theme-0.0.0.tgz)"
+          PLAT_TGZ="$(ls "$PACK"/doki-land-doki-*-0.0.0.tgz | grep -Ev 'doki-land-doki-(0\.0\.0|plugin-0\.0\.0|theme-0\.0\.0)\.tgz$' | head -n1)"
+          test -n "$PLAT_TGZ"
+          TMP="$(mktemp -d)"
+          cd "$TMP"
+          npm init -y >/dev/null
+          # Local tarballs only ? packages are not on the registry during CI smoke.
+          npm install "$PLUGIN_TGZ" "$THEME_TGZ" "$DOKI_TGZ" "$PLAT_TGZ" --omit=optional
+          node -e "const c=require('@doki-land/doki/native'); if(typeof c.openProject!=='function') process.exit(1); console.log('tarball install ok')"
+
+      - name: Upload .node artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doki-core-${{ matrix.host }}
+          path: doki-engine/compilers/doki-node/doki-core.${{ matrix.host }}.node
+          if-no-files-found: error
+
+  install-matrix:
+    needs: native
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            host: win32-x64-msvc
+          - os: windows-11-arm
+            host: win32-arm64-msvc
+          - os: macos-latest
+            host: darwin-arm64
+          - os: macos-13
+            host: darwin-x64
+          - os: ubuntu-latest
+            host: linux-x64-gnu
+          - os: ubuntu-24.04-arm
+            host: linux-arm64-gnu
+          # musl .node cannot dlopen on glibc ? presence check only.
+          - os: ubuntu-latest
+            host: linux-x64-musl
+    timeout-minutes: 20
+    steps:
+      - name: Checkout doki-engine (no Rust rebuild)
+        uses: actions/checkout@v4
+        with:
+          path: doki-engine
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Download platform binary into package root
+        uses: actions/download-artifact@v4
+        with:
+          name: doki-core-${{ matrix.host }}
+          path: doki-engine/compilers/doki-node
+
+      - name: Load .node via published loader (no local napi build)
+        working-directory: doki-engine/compilers/doki-node
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "doki-core.${{ matrix.host }}.node"
+          # musl .node cannot dlopen on glibc ? presence check only.
+          if [[ "${{ matrix.host }}" == *musl* ]]; then
+            echo "musl artifact present; glibc runner skips dlopen"
+            exit 0
+          fi
+          node -e "const c=require('.'); if(typeof c.openProject!=='function') process.exit(1); console.log('loader ok')"
+          npm test

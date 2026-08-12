@@ -1,0 +1,13 @@
+{
+    "name": "example-plugin",
+    "version": "0.1.0",
+    "description": "示例插件",
+    "type": "module",
+    "main": "index.js",
+    "keywords": [
+        "doki",
+        "plugin"
+    ],
+    "author": "Doki Engine",
+    "license": "MIT"
+}

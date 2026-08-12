@@ -1,0 +1,24 @@
+[package]
+name = "doki-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Thin N-API binding for doki-core (opaque session ids + JSON; no business semantics)"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+doki-core = { path = "../doki-core" }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+
+[build-dependencies]
+napi-build = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

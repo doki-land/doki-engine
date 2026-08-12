@@ -1,0 +1,26 @@
+title = "My Blog"
+description = "A Doki blog scaffold"
+content_dir = "content"
+output_dir = "dist"
+public_dir = "public"
+incremental = true
+base_url = "https://example.com"
+
+[theme]
+path = "./themes/plain"
+
+[[plugins]]
+path = "./plugins/sitemap"
+enabled = true
+
+[[plugins]]
+path = "./plugins/robots"
+enabled = true
+
+[[plugins]]
+path = "./plugins/feed"
+enabled = true
+
+[[plugins]]
+path = "./plugins/search"
+enabled = true

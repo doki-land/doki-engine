@@ -1,0 +1,26 @@
+[site]
+title = "Documentation Site Example"
+description = "A documentation site built with Doki Engine"
+lang = "en"
+author = "Doki Engine Team"
+type = "docs"
+url = "https://docs.example.com"
+
+[build]
+input_dir = "content"
+output_dir = "dist"
+static_dir = "static"
+incremental = true
+
+[template]
+engine = "dejavu"
+dir = "templates"
+layout = "layout"
+
+[taxonomies]
+sections = ["getting-started", "guide", "reference"]
+versions = ["latest", "v1.0", "v0.9"]
+languages = ["en", "zh"]
+
+[sitemap]
+enabled = true

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{% site.lang %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% page.title %} - {% site.title %}</title>
+    <meta name="description" content="{% site.description %}">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>{% site.title %}</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% end block %}
+    </main>
+    <footer>
+        <p>&copy; {% now |> date: '%Y' %} {% site.title %}</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "doki-engine",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "build": "pnpm --filter @doki-land/* build",
+    "test": "pnpm --filter @doki-land/* test",
+    "test:ts": "vitest run",
+    "test:ts:watch": "vitest",
+    "fmt": "biome format --write .",
+    "check": "biome check .",
+    "push": "wee test && git push",
+    "reset": "git reset Head~ --soft"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "biomejs": "^0.0.0",
+    "vitest": "^0.34.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@parcel/watcher",
+      "@vscode/vsce-sign",
+      "keytar"
+    ]
+  }
+}

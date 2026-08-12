@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://doki.land/schemas/package-doki-field.schema.json",
+  "title": "package.json \"doki\" field",
+  "description": "Declared on theme and plugin packages. Local directories use the same shape so npm pack does not require a second structure.",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["kind", "themeApi", "manifest"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "theme" },
+        "themeApi": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "manifest": {
+          "type": "string",
+          "description": "Path to doki.theme.json"
+        },
+        "plugin": {
+          "type": "string",
+          "description": "Optional ESM plugin entry; only then does installing the theme execute code"
+        },
+        "pluginApi": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      }
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "doki.plugin.schema.json"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "plugin" }
+          }
+        }
+      ]
+    }
+  ]
+}

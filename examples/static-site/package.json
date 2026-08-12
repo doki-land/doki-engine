@@ -1,0 +1,20 @@
+{
+    "name": "doki-static-site-example",
+    "version": "1.0.0",
+    "description": "A static site example using Doki Engine",
+    "main": "index.js",
+    "scripts": {
+        "build": "doki build",
+        "serve": "doki serve"
+    },
+    "keywords": [
+        "doki",
+        "static-site",
+        "example"
+    ],
+    "author": "Doki Engine Team",
+    "license": "MIT",
+    "devDependencies": {
+        "doki-engine": "file:../../frontends/doki-engine"
+    }
+}

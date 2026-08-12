@@ -1,0 +1,356 @@
+{
+    "name": "doki-vscode",
+    "displayName": "Doki VSCode Extension",
+    "description": "VSCode extension for Doki template engine",
+    "version": "0.0.0",
+    "publisher": "doki-land",
+    "license": "MIT",
+  
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Formatters",
+        "Linters"
+    ],
+    "keywords": [
+        "template",
+        "dejavu",
+        "doki",
+        "static site generator"
+    ],
+    "activationEvents": [
+        "onLanguage:dejavu",
+        "onLanguage:doki"
+    ],
+    "main": "./out/src/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "doki.compileTemplate",
+                "title": "Doki: Compile Template"
+            },
+            {
+                "command": "doki.showErrors",
+                "title": "Doki: Show Errors"
+            },
+            {
+                "command": "doki.clearErrors",
+                "title": "Doki: Clear Errors"
+            },
+            {
+                "command": "doki.copyError",
+                "title": "Doki: Copy Error"
+            },
+            {
+                "command": "doki.viewErrorDocs",
+                "title": "Doki: View Error Documentation"
+            },
+            {
+                "command": "doki.fixAll",
+                "title": "Doki: Fix All Issues"
+            },
+            {
+                "command": "doki.preview",
+                "title": "Doki: Open Preview",
+                "icon": "$(open-preview)"
+            },
+            {
+                "command": "doki.previewSide",
+                "title": "Doki: Open Preview to the Side",
+                "icon": "$(open-preview)"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "doki-explorer",
+                    "title": "Doki Explorer",
+                    "icon": "icons/doki-sidebar.svg"
+                }
+            ]
+        },
+        "views": {
+            "doki-explorer": [
+                {
+                    "id": "dokiErrors",
+                    "name": "Errors",
+                    "icon": "icons/error.svg",
+                    "contextualTitle": "Doki Errors"
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+                {
+                    "command": "doki.clearErrors",
+                    "when": "view == dokiErrors",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "doki.copyError",
+                    "when": "view == dokiErrors",
+                    "group": "inline"
+                },
+                {
+                    "command": "doki.viewErrorDocs",
+                    "when": "view == dokiErrors",
+                    "group": "inline"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "doki.previewSide",
+                    "when": "resourceExtname == .doki || resourceExtname == .dj || resourceExtname == .dejavu",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "languages": [
+            {
+                "id": "doki",
+                "aliases": [
+                    "Doki",
+                    "doki"
+                ],
+                "extensions": [
+                    ".doki",
+                    ".dj"
+                ],
+                "configuration": "./syntaxes/doki-language-configuration.json",
+                "icon": {
+                    "light": "./icons/doki-light.svg",
+                    "dark": "./icons/doki-dark.svg"
+                }
+            },
+            {
+                "id": "dejavu",
+                "aliases": [
+                    "Dejavu",
+                    "dejavu"
+                ],
+                "extensions": [
+                    ".dejavu"
+                ],
+                "configuration": "./syntaxes/dejavu-language-configuration.json",
+                "icon": {
+                    "light": "./icons/dejavu-light.svg",
+                    "dark": "./icons/dejavu-dark.svg"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "doki",
+                "scopeName": "text.html.doki",
+                "path": "./syntaxes/doki.tmLanguage.json"
+            },
+            {
+                "language": "dejavu",
+                "scopeName": "text.html.dejavu",
+                "path": "./syntaxes/dejavu.tmLanguage.json"
+            }
+        ],
+        "customEditors": [
+            {
+                "viewType": "doki.preview",
+                "displayName": "Doki Preview",
+                "selector": [
+                    {
+                        "filenamePattern": "*.doki"
+                    },
+                    {
+                        "filenamePattern": "*.dj"
+                    },
+                    {
+                        "filenamePattern": "*.dejavu"
+                    }
+                ]
+            }
+        ],
+        "configuration": {
+            "title": "Doki",
+            "properties": {
+                "doki.trace.server": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Traces the communication between VS Code and the language server."
+                },
+                "doki.template.delimiters.codeStart": {
+                    "type": "string",
+                    "default": "{%",
+                    "description": "代码块开始定界符"
+                },
+                "doki.template.delimiters.codeEnd": {
+                    "type": "string",
+                    "default": "%}",
+                    "description": "代码块结束定界符"
+                },
+                "doki.template.delimiters.outputStart": {
+                    "type": "string",
+                    "default": "{{",
+                    "description": "输出块开始定界符"
+                },
+                "doki.template.delimiters.outputEnd": {
+                    "type": "string",
+                    "default": "}}",
+                    "description": "输出块结束定界符"
+                },
+                "doki.template.delimiters.commentStart": {
+                    "type": "string",
+                    "default": "{#",
+                    "description": "注释块开始定界符"
+                },
+                "doki.template.delimiters.commentEnd": {
+                    "type": "string",
+                    "default": "#}",
+                    "description": "注释块结束定界符"
+                },
+                "doki.build.outputDir": {
+                    "type": "string",
+                    "default": "dist",
+                    "description": "输出目录"
+                },
+                "doki.build.ignoreFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "忽略文件列表"
+                },
+                "doki.format.indentSize": {
+                    "type": "number",
+                    "default": 2,
+                    "description": "格式化时的缩进大小（空格数）"
+                },
+                "doki.format.preserveNewlines": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "格式化时是否保留原有的换行符"
+                },
+                "doki.diagnostics.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否启用诊断功能"
+                },
+                "doki.diagnostics.severity": {
+                    "type": "object",
+                    "default": {
+                        "syntaxError": "error",
+                        "undefinedVariable": "warning",
+                        "undefinedFunction": "warning",
+                        "typeMismatch": "hint"
+                    },
+                    "description": "各类诊断问题的严重程度配置",
+                    "properties": {
+                        "syntaxError": {
+                            "type": "string",
+                            "enum": [
+                                "error",
+                                "warning",
+                                "hint",
+                                "information"
+                            ],
+                            "description": "语法错误的严重程度"
+                        },
+                        "undefinedVariable": {
+                            "type": "string",
+                            "enum": [
+                                "error",
+                                "warning",
+                                "hint",
+                                "information"
+                            ],
+                            "description": "未定义变量的严重程度"
+                        },
+                        "undefinedFunction": {
+                            "type": "string",
+                            "enum": [
+                                "error",
+                                "warning",
+                                "hint",
+                                "information"
+                            ],
+                            "description": "未定义函数的严重程度"
+                        },
+                        "typeMismatch": {
+                            "type": "string",
+                            "enum": [
+                                "error",
+                                "warning",
+                                "hint",
+                                "information"
+                            ],
+                            "description": "类型不匹配的严重程度"
+                        }
+                    }
+                },
+                "doki.completion.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否启用代码补全功能"
+                },
+                "doki.completion.snippets": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否启用代码片段补全"
+                },
+                "doki.templates.includes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "templates/**"
+                    ],
+                    "description": "模板文件包含路径模式"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/tests/runTest.js",
+        "package": "vsce package"
+    },
+    "dependencies": {
+        "@doki-land/doki-engine": "workspace:*",
+        "vscode-languageclient": "^9.0.0"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.90.0",
+        "@types/glob": "^8.1.0",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "eslint": "^8.56.0",
+        "glob": "^8.1.0",
+        "mocha": "^10.2.0",
+        "typescript": "^5.3.3",
+        "@vscode/test-electron": "^2.3.8",
+        "@vscode/vsce": "^2.22.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/doki-land/doki-engine.git",
+        "directory": "runtimes/editors/vscode-doki"
+    },
+    "bugs": {
+        "url": "https://github.com/doki-land/doki-engine/issues"
+    },
+    "homepage": "https://github.com/doki-land/doki-engine#readme"
+}

@@ -1,0 +1,70 @@
+{% extends "base.doki" %}
+
+{% block content %}
+<section class="hero-section">
+  <div class="container hero-layout">
+    <div class="hero-copy">
+      <p class="kicker"><span class="kicker-line"></span>THE PUBLISHING ECOSYSTEM</p>
+      <h1>Own the content.<br><em>Shape every page.</em></h1>
+      <p class="hero-intro">Doki turns Markdown, structured data, and a Dejavu template into a site that feels authored, not assembled.</p>
+      <div class="hero-actions"><a class="button button-primary" href="/docs/quickstart/">Start with a folder <span aria-hidden="true">↗</span></a><a class="text-link" href="#ecosystem">See the ecosystem <span aria-hidden="true">↓</span></a></div>
+      <div class="hero-proof"><span><strong>01</strong> write in Markdown</span><span><strong>02</strong> shape with Dejavu</span><span><strong>03</strong> ship static files</span></div>
+    </div>
+
+    <div class="publication-board" aria-label="Doki output preview">
+      <div class="board-header"><span class="board-file"><b>D/</b> publication.config</span><span class="board-status"><i></i> BUILD READY</span></div>
+      <div class="board-body">
+        <div class="board-sidebar"><span class="sidebar-title">SURFACES</span><span class="sidebar-item is-active">journal</span><span class="sidebar-item">reference</span><span class="sidebar-item">field notes</span><span class="sidebar-rule"></span><span class="sidebar-meta">3 outputs<br>1 content core</span></div>
+        <div class="board-canvas">
+          <div class="canvas-top"><span>content/launch.md</span><span>rendered surface</span></div>
+          <div class="canvas-title">A place for<br><em>the long read.</em></div>
+          <div class="canvas-meta"><span>01 / JOURNAL</span><span>12 MIN READ</span></div>
+          <div class="canvas-rule"></div>
+          <p class="canvas-text">One source can become a quiet article, a useful reference page, or a distinctive publication surface without moving the meaning around.</p>
+          <div class="canvas-footer"><span>DEJAVU TEMPLATE</span><span class="canvas-arrow">↗</span></div>
+        </div>
+      </div>
+      <div class="board-rail"><span>markdown</span><b>→</b><span>DejaVu</span><b>→</b><span>static site</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="statement-band"><div class="container statement-inner"><p>A content system should disappear behind the work.</p><span>NO DASHBOARD NO LOCK-IN</span></div></section>
+
+<section class="manifest-section" id="how-it-works">
+  <div class="container section-grid">
+    <div class="section-intro"><p class="kicker"><span class="kicker-line"></span>FROM FILE TO PUBLICATION</p><h2>One source.<br><em>Many readings.</em></h2><p>Keep the durable part of a site in plain files. Let templates carry the tone, hierarchy, and rhythm.</p></div>
+    <div class="manifest-flow">
+      <div class="flow-step"><span class="flow-number">01</span><div><h3>Content stays portable</h3><p>Markdown, frontmatter, images, and data remain yours.</p></div><code>content/posts/*.md</code></div>
+      <div class="flow-connector" aria-hidden="true">↓</div>
+      <div class="flow-step"><span class="flow-number">02</span><div><h3>DejaVu adds intent</h3><p>Templates describe how a publication behaves and feels.</p></div><code>templates/*.html</code></div>
+      <div class="flow-connector" aria-hidden="true">↓</div>
+      <div class="flow-step"><span class="flow-number">03</span><div><h3>Static output travels</h3><p>Build a fast, inspectable site for any host or CDN.</p></div><code>dist/index.html</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="ecosystem-section" id="ecosystem">
+  <div class="container">
+    <div class="section-heading-row"><div><p class="kicker"><span class="kicker-line"></span>THE ECOSYSTEM</p><h2>Choose your<br><em>publishing shape.</em></h2></div><p>Doki is the engine underneath. The surface can be a blog, a docs site, a magazine, or something only your team can name.</p></div>
+    <div class="surface-grid">
+      <a class="surface-card surface-journal" href="/examples/" aria-label="Journal surface example"><div class="surface-card-top"><span>01 / JOURNAL</span><span>READ</span></div><h3>Notes with a point of view.</h3><p>Editorial rhythm, essays, and a homepage that makes room for the sentence.</p><span class="surface-mark">↗</span></a>
+      <a class="surface-card surface-reference" href="/docs/quickstart/" aria-label="Reference surface example"><div class="surface-card-top"><span>02 / REFERENCE</span><span>LEARN</span></div><h3>Docs people can navigate.</h3><p>Structure, search, code, and versioned knowledge without a hosted editor.</p><span class="surface-mark">↗</span></a>
+      <a class="surface-card surface-field" href="/examples/" aria-label="Field notes surface example"><div class="surface-card-top"><span>03 / FIELD NOTES</span><span>COLLECT</span></div><h3>Small sites with character.</h3><p>Project logs, studios, personal archives, and the things between a blog and a book.</p><span class="surface-mark">↗</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="tools-section">
+  <div class="container tools-layout">
+    <div><p class="kicker"><span class="kicker-line"></span>BUILT TO BE EXTENDED</p><h2>Bring the tools<br><em>you already trust.</em></h2><p class="tools-intro">Themes set the visual grammar. Plugins add behavior. Migration tools help you leave the old stack without leaving your archive.</p></div>
+    <div class="tool-list">
+      <a href="/docs/guide/themes-plugins/" class="tool-row"><span class="tool-glyph">T</span><span><strong>Themes</strong><small>Own the surface, keep the content.</small></span><span class="tool-arrow">↗</span></a>
+      <a href="/docs/guide/themes-plugins/" class="tool-row"><span class="tool-glyph">P</span><span><strong>Plugins</strong><small>Add search, feeds, images, and your own hooks.</small></span><span class="tool-arrow">↗</span></a>
+      <a href="/docs/guide/migration/" class="tool-row"><span class="tool-glyph">M</span><span><strong>Migration</strong><small>Bring a WordPress, Hugo, or Hexo archive home.</small></span><span class="tool-arrow">↗</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="install-section"><div class="container install-inner"><div><p class="kicker"><span class="kicker-line"></span>START SMALL</p><h2>Your content folder<br><em>is the whole brief.</em></h2></div><div class="install-command"><span class="command-label">TERMINAL / NEW SITE</span><code><b>$</b> pnpm add @doki-land/doki-engine</code><a href="/docs/quickstart/" class="button button-primary">Read the quickstart <span aria-hidden="true">↗</span></a></div></div></section>
+{% end block %}

@@ -1,4 +1,32 @@
-.idea/
-*.iml
+# OS
+.DS_Store/
+thumbs.db
+time-travel.*
+
+# IDE
 .vscode/
+.idea/
+.trae/
 .vs/
+*.iml
+
+# Rust
+target/
+Cargo.lock
+.cargo/config.toml
+
+# Node
+node_modules/
+dist/
+portable/
+cache/
+pnpm-lock.yaml
+*.log
+*.txt
+
+# Native addon artifacts (never commit; ship via optionalDependencies / CI)
+*.node
+**/*.node
+packages/doki/native/
+packages/.doki-core.napi-stage-*/
+packages/**/.napi-rs-*/

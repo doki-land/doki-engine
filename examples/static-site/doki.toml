@@ -1,0 +1,16 @@
+[site]
+title = "Static Site Example"
+description = "A simple static site built with Doki Engine"
+lang = "en"
+author = "Doki Engine Team"
+
+[build]
+input_dir = "content"
+output_dir = "dist"
+static_dir = "static"
+incremental = true
+
+[template]
+engine = "dejavu"
+dir = "templates"
+layout = "layout"

@@ -1,0 +1,30 @@
+{
+    "name": "{{fullName}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "test": "vitest run"
+    },
+    "keywords": [
+        "doki",
+        "doki-engine",
+        "plugin"
+    ],
+    "author": "{{author}}",
+    "peerDependencies": {
+        "@doki-land/doki-engine": "^1.0.0"
+    },
+    "devDependencies": {
+        "@doki-land/doki-engine": "workspace:*",
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0",
+        "vitest": "^2.0.0"
+    },
+    "license": "MIT"
+}

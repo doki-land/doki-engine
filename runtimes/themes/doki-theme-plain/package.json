@@ -1,0 +1,21 @@
+{
+  "name": "@doki-land/doki-theme-plain",
+  "version": "0.0.0",
+  "description": "Official plain Doki theme (declarative layouts + defaults)",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "doki.theme.json",
+    "doki.defaults.toml",
+    "layouts",
+    "assets"
+  ],
+  "doki": {
+    "kind": "theme",
+    "manifest": "doki.theme.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

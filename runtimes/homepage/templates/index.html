@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="hero-section">
+  <div class="container hero-layout">
+    <div class="hero-copy">
+      <p class="kicker"><span class="kicker-line"></span>CONTENT INFRASTRUCTURE / OPEN WEB</p>
+      <h1>Ship content.<br>Build together.<br><em>Keep it yours.</em></h1>
+      <p class="hero-intro">Doki gives teams and communities a file-first way to build blogs, docs, and project sites with the DejaVu template engine.</p>
+      <div class="hero-actions"><a class="button button-primary" href="/docs/quickstart/">Start with a folder <span aria-hidden="true">↗</span></a><a class="text-link" href="#ecosystem">See the ecosystem <span aria-hidden="true">↓</span></a></div>
+      <div class="hero-proof"><span><strong>01</strong> source files</span><span><strong>02</strong> shared themes</span><span><strong>03</strong> static deploys</span></div>
+    </div>
+
+    <div class="publication-board" aria-label="Doki output preview">
+      <div class="board-header"><span class="board-file"><b>D/</b> publication.config</span><span class="board-status"><i></i> BUILD READY</span></div>
+      <div class="board-body">
+        <div class="board-sidebar"><span class="sidebar-title">SURFACES</span><span class="sidebar-item is-active">community</span><span class="sidebar-item">docs</span><span class="sidebar-item">project</span><span class="sidebar-rule"></span><span class="sidebar-meta">3 outputs<br>1 content core</span></div>
+        <div class="board-canvas">
+          <div class="canvas-top"><span>content/launch.md</span><span>rendered surface</span></div>
+          <div class="canvas-title">A home for<br><em>the whole team.</em></div>
+          <div class="canvas-meta"><span>COMMUNITY / HOME</span><span>12 MIN READ</span></div>
+          <div class="canvas-rule"></div>
+          <p class="canvas-text">One source can become a community home, a useful reference page, or a project surface without moving the meaning around.</p>
+          <div class="canvas-footer"><span>DEJAVU TEMPLATE</span><span class="canvas-arrow">↗</span></div>
+        </div>
+      </div>
+      <div class="board-rail"><span>markdown</span><b>→</b><span>DejaVu</span><b>→</b><span>static site</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="statement-band"><div class="container statement-inner"><p>One source. A whole community of surfaces.</p><span>OPEN FILES / OPEN TOOLS</span></div></section>
+
+<section class="manifest-section" id="how-it-works">
+  <div class="container section-grid">
+    <div class="section-intro"><p class="kicker"><span class="kicker-line"></span>HOW TEAMS SHIP</p><h2>One source.<br><em>Many ways to work.</em></h2><p>Keep the durable part of a site in plain files. Let your team review, extend, and deploy without handing over the source.</p></div>
+    <div class="manifest-flow">
+      <div class="flow-step"><span class="flow-number">01</span><div><h3>Write once, review together</h3><p>Markdown, frontmatter, images, and data stay in the repo.</p></div><code>content/posts/*.md</code></div>
+      <div class="flow-connector" aria-hidden="true">↓</div>
+      <div class="flow-step"><span class="flow-number">02</span><div><h3>Compose with DejaVu</h3><p>Templates define how a site behaves, reads, and grows.</p></div><code>templates/*.html</code></div>
+      <div class="flow-connector" aria-hidden="true">↓</div>
+      <div class="flow-step"><span class="flow-number">03</span><div><h3>Deploy where you want</h3><p>Build fast, inspectable output for any host or CDN.</p></div><code>dist/index.html</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="ecosystem-section" id="ecosystem">
+  <div class="container">
+    <div class="section-heading-row"><div><p class="kicker"><span class="kicker-line"></span>THE ECOSYSTEM</p><h2>Build a home<br><em>people return to.</em></h2></div><p>Doki is the engine underneath. Start with the surface your community needs, then add the tools and people that make it useful.</p></div>
+    <div class="surface-grid">
+      <a class="surface-card surface-journal" href="/examples/" aria-label="Community site examples"><div class="surface-card-top"><span>01 / COMMUNITY</span><span>GATHER</span></div><h3>A home for the people around your work.</h3><p>News, essays, events, and shared context in one place.</p><span class="surface-mark">↗</span></a>
+      <a class="surface-card surface-reference" href="/docs/quickstart/" aria-label="Documentation examples"><div class="surface-card-top"><span>02 / DOCS</span><span>GUIDE</span></div><h3>Answers your team can keep current.</h3><p>Structure, code, and versioned knowledge without a hosted editor.</p><span class="surface-mark">↗</span></a>
+      <a class="surface-card surface-field" href="/examples/" aria-label="Project site examples"><div class="surface-card-top"><span>03 / PROJECT</span><span>SHIP</span></div><h3>A project site that feels alive.</h3><p>Changelogs, roadmaps, and field notes that stay close to the source.</p><span class="surface-mark">↗</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="tools-section" id="tools">
+  <div class="container tools-layout">
+    <div><p class="kicker"><span class="kicker-line"></span>OPEN ECOSYSTEM</p><h2>Build with a community<br><em>around you.</em></h2><p class="tools-intro">Themes set the visual grammar. Plugins add behavior. Migration tools help you bring an existing archive home.</p></div>
+    <div class="tool-list">
+      <a href="/docs/guide/themes-plugins/" class="tool-row"><span class="tool-glyph">T</span><span><strong>Themes</strong><small>Own the surface, keep the content.</small></span><span class="tool-arrow">↗</span></a>
+      <a href="/docs/guide/themes-plugins/" class="tool-row"><span class="tool-glyph">P</span><span><strong>Plugins</strong><small>Add search, feeds, images, and your own hooks.</small></span><span class="tool-arrow">↗</span></a>
+      <a href="/docs/guide/migration/" class="tool-row"><span class="tool-glyph">M</span><span><strong>Migration</strong><small>Bring a WordPress, Hugo, or Hexo archive home.</small></span><span class="tool-arrow">↗</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="install-section" id="get-started"><div class="container install-inner"><div><p class="kicker"><span class="kicker-line"></span>FROM REPO TO RELEASE</p><h2>Start with a folder.<br><em>Grow with your people.</em></h2></div><div class="install-command"><span class="command-label">TERMINAL / NEW SITE</span><code><b>$</b> pnpm add @doki-land/doki-engine</code><a href="/docs/quickstart/" class="button button-primary">Read the quickstart <span aria-hidden="true">↗</span></a></div></div></section>
+{% end block %}

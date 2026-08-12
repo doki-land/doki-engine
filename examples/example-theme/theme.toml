@@ -1,0 +1,9 @@
+name = "example-theme"
+version = "0.1.0"
+description = "示例主题"
+author = "Doki Engine"
+tags = ["blog", "minimal"]
+
+[config]
+  [config.site]
+  default_author = "Author Name"

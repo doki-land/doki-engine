@@ -1,0 +1,33 @@
+[site]
+title = "My Blog"
+description = "A personal blog powered by Doki Engine"
+lang = "en"
+author = "John Doe"
+type = "blog"
+url = "https://example.com"
+
+[build]
+input_dir = "content"
+output_dir = "dist"
+static_dir = "static"
+incremental = true
+
+[template]
+engine = "dejavu"
+dir = "templates"
+layout = "layout"
+
+[taxonomies]
+tags = { feed = true }
+categories = { feed = true }
+series = { feed = false }
+authors = { feed = true }
+
+[feed]
+enabled = true
+path = "feed.xml"
+format = "atom"
+
+[sitemap]
+enabled = true
+path = "sitemap.xml"

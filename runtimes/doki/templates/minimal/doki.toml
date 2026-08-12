@@ -1,0 +1,15 @@
+title = "My Doki Site"
+description = "A minimal Doki site"
+content_dir = "content"
+output_dir = "dist"
+public_dir = "public"
+incremental = true
+
+# Optional theme (path or package — not both):
+# [theme]
+# path = "./themes/docs"
+
+# Optional plugins:
+# [[plugins]]
+# path = "./plugins/example"
+# enabled = true

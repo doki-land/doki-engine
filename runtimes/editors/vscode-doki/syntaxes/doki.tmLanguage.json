@@ -1,0 +1,320 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Doki",
+    "scopeName": "text.html.doki",
+    "fileTypes": ["doki", "dj"],
+    "patterns": [
+        {
+            "include": "#comment"
+        },
+        {
+            "include": "#output"
+        },
+        {
+            "include": "#block"
+        },
+        {
+            "include": "text.html.basic"
+        }
+    ],
+    "repository": {
+        "comment": {
+            "name": "comment.block.doki",
+            "begin": "\\{#",
+            "end": "#\\}",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.begin.doki"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.comment.end.doki"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "comment.block.documentation.doki",
+                    "match": "."
+                }
+            ]
+        },
+        "output": {
+            "name": "meta.template.output.doki",
+            "begin": "\\{\\{",
+            "end": "\\}\\}",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.output.begin.doki"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.output.end.doki"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "block": {
+            "name": "meta.template.block.doki",
+            "begin": "\\{%",
+            "end": "%\\}",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.block.begin.doki"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.block.end.doki"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#statement"
+                }
+            ]
+        },
+        "statement": {
+            "patterns": [
+                {
+                    "name": "keyword.control.doki",
+                    "match": "\\b(if|else|end|loop|block|extends|let|micro|match|case|using|namespace|break|continue|prepend|append|super)\\b"
+                },
+                {
+                    "name": "keyword.control.conditional.doki",
+                    "match": "\\belse\\s+if\\b"
+                },
+                {
+                    "name": "keyword.control.loop.doki",
+                    "match": "\\bin\\b"
+                },
+                {
+                    "name": "constant.language.boolean.doki",
+                    "match": "\\b(true|false)\\b"
+                },
+                {
+                    "name": "constant.language.null.doki",
+                    "match": "\\bnull\\b"
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "expression": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.doki",
+                    "begin": "\"",
+                    "end": "\"",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.doki",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.doki",
+                    "begin": "'",
+                    "end": "'",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.doki",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.template.doki",
+                    "begin": "`",
+                    "end": "`",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.string.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.doki",
+                            "match": "\\\\."
+                        },
+                        {
+                            "name": "meta.template.expression.doki",
+                            "begin": "\\$\\{",
+                            "end": "\\}",
+                            "beginCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.template-expression.begin.doki"
+                                }
+                            },
+                            "endCaptures": {
+                                "0": {
+                                    "name": "punctuation.definition.template-expression.end.doki"
+                                }
+                            },
+                            "patterns": [
+                                {
+                                    "include": "#expression"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "constant.numeric.doki",
+                    "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
+                },
+                {
+                    "name": "keyword.operator.arithmetic.doki",
+                    "match": "(\\+|\\-|\\*|\\/|\\%)"
+                },
+                {
+                    "name": "keyword.operator.comparison.doki",
+                    "match": "(\\=\\=|\\!\\=|\\<|\\>|\\<\\=|\\>\\=)"
+                },
+                {
+                    "name": "keyword.operator.logical.doki",
+                    "match": "(\\&\\&|\\|\\||\\!)"
+                },
+                {
+                    "name": "keyword.operator.assignment.doki",
+                    "match": "(\\=|\\+\\=|\\-\\=|\\*\\=|\\/\\=|\\%\\=)"
+                },
+                {
+                    "name": "keyword.operator.bitwise.doki",
+                    "match": "(\\&|\\||\\^|\\~|\\<\\<|\\>\\>|\\>\\>\\>)"
+                },
+                {
+                    "name": "keyword.operator.range.doki",
+                    "match": "\\.\\."
+                },
+                {
+                    "name": "punctuation.separator.pipe.doki",
+                    "match": "\\|"
+                },
+                {
+                    "name": "variable.other.readwrite.doki",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+                },
+                {
+                    "name": "meta.function-call.doki",
+                    "begin": "(\\b[a-zA-Z_][a-zA-Z0-9_]*\\b)(\\()",
+                    "end": "\\)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.doki"
+                        },
+                        "2": {
+                            "name": "punctuation.section.parens.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "punctuation.section.parens.doki",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.parens.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.brackets.doki",
+                    "begin": "\\[",
+                    "end": "\\]",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.brackets.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.brackets.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.braces.doki",
+                    "begin": "\\{",
+                    "end": "\\}",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.section.braces.begin.doki"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.section.braces.end.doki"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "name": "punctuation.separator.doki",
+                    "match": "[,.:]"
+                }
+            ]
+        }
+    }
+}

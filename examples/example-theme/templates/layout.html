@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block body %}
+<header class="site-header">
+    <div class="container">
+        <h1 class="site-title">
+            <a href="/">{% site.title %}</a>
+        </h1>
+        <nav class="site-nav">
+            <ul>
+                <li><a href="/">首页</a></li>
+                <li><a href="/about/">关于</a></li>
+                <li><a href="/tags/">标签</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<main class="site-main">
+    <div class="container">
+        {% block content %}{% end block %}
+    </div>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <p>&copy; {% now |> date: '%Y' %} {% site.author %}. Powered by Doki Engine.</p>
+    </div>
+</footer>
+{% end block %}

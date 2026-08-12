@@ -1,0 +1,124 @@
+:root {
+    --color-primary: #2563eb;
+    --color-text: #1f2937;
+    --color-background: #ffffff;
+    --color-border: #e5e7eb;
+    --font-sans: system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    background-color: var(--color-background);
+    line-height: 1.6;
+}
+
+header {
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 2rem;
+}
+
+header nav a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+footer {
+    border-top: 1px solid var(--color-border);
+    padding: 1rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+article.post {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+article.post h2 a {
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+article.post h2 a:hover {
+    color: var(--color-primary);
+}
+
+article.page header {
+    border-bottom: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
+}
+
+article.page h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+article.page .content {
+    line-height: 1.8;
+}
+
+article.page .content h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+article.page .content p {
+    margin-bottom: 1rem;
+}
+
+article.page .content pre {
+    background-color: #f3f4f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+}
+
+article.page .content code {
+    font-family: var(--font-mono);
+    background-color: #f3f4f6;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+}
+
+article.page .content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.taxonomies {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.taxonomy {
+    margin-bottom: 0.5rem;
+}
+
+.taxonomy a {
+    color: var(--color-primary);
+    text-decoration: none;
+    margin-right: 0.5rem;
+}
+
+.taxonomy a:hover {
+    text-decoration: underline;
+}
