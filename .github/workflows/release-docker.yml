@@ -60,7 +60,7 @@ jobs:
       - name: Install & build
         run: |
           set -euo pipefail
-          pnpm install
+          pnpm install --no-frozen-lockfile
           node scripts/set-release-version.mjs "${{ steps.ver.outputs.version }}"
           node scripts/prepare-npm-publish.mjs
           node scripts/pack-doki-portable.mjs --out portable

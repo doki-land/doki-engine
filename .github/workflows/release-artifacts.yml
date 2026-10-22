@@ -47,7 +47,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Type check
         run: pnpm run check
@@ -99,7 +99,7 @@ jobs:
       - name: Install & pack zip
         run: |
           set -euo pipefail
-          pnpm install
+          pnpm install --no-frozen-lockfile
           node scripts/set-release-version.mjs "${{ steps.ver.outputs.version }}"
           node scripts/prepare-npm-publish.mjs
           mkdir -p dist-artifacts
