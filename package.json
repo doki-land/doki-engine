@@ -18,6 +18,7 @@
     "vitest": "^0.34.0"
   },
   "pnpm": {
+    "frozen-lockfile": false,
     "onlyBuiltDependencies": [
       "esbuild",
       "@parcel/watcher",
