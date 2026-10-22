@@ -104,7 +104,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: doki-land/dejavu-language
-          ref: dev
+          # doki-engine tag vX.Y.Z requires matching dejavu-language tag vX.Y.Z
+          ref: ${{ github.ref }}
           path: dejavu-language
 
       - name: Alpine build deps (musl hosts only)
