@@ -16,9 +16,53 @@ concurrency:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
+  # ------------------------------------------------------------------
+  # CI 门控：类型检查 + 测试 + 打包 smoke
+  # ------------------------------------------------------------------
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm run check
+
+      - name: Tests
+        run: pnpm run test:ts
+
+      - name: Build smoke
+        run: pnpm run build
+
+  # ------------------------------------------------------------------
+  # Release artifacts（CI 绿了才跑）
+  # ------------------------------------------------------------------
   artifacts:
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -74,3 +118,11 @@ jobs:
             dist-artifacts/${{ steps.ver.outputs.zip }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------------
+      # 可信发布：GitHub OIDC → SLSA v1 build provenance
+      # ------------------------------------------------------------------
+      - name: Generate SLSA provenance attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist-artifacts/${{ steps.ver.outputs.zip }}
