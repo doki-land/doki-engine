@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use dejavu::Dejavu;
+use dejavu::{Dejavu, Language, TemplateConfig};
 use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
 
@@ -12,20 +12,37 @@ use crate::config::{ExtensionRef, ProjectConfig};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
 
+/// Doki template delimiters: `{% %}` for code, `{# #}` for comments.
+///
+/// Same as the TypeScript `DOKI_LANGUAGE` in `compilers/doki-engine/src/engine.ts`.
+pub fn doki_language() -> Language {
+    Language {
+        syntax_mode: "template".into(),
+        template: TemplateConfig {
+            code_start: "{%".into(),
+            code_end: "%}".into(),
+            comment_start: "{#".into(),
+            comment_end: "#}".into(),
+            support_filter_pipe: true,
+            legacy_for: false,
+        },
+    }
+}
+
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
 /// Do not use `|> safe` here until the Dejavu public facade on `dejavu-language@dev`
 /// registers that filter. Markdown HTML is trusted host content; for now we emit it
 /// via a plain interpolation (escaped). Themes can opt into raw HTML once `safe` lands.
 pub const DEFAULT_LAYOUT: &str = r#"<!DOCTYPE html>
-<html lang="<% site.lang %>">
+<html lang="{% page.lang %}">
 <head>
 <meta charset="utf-8"/>
-<title><% page.title %></title>
+<title>{% page.title %}</title>
 </head>
 <body>
 <main>
-<% content %>
+{% content %}
 </main>
 </body>
 </html>
@@ -89,9 +106,9 @@ pub fn render_page(
         "content": content_html,
     });
 
-    let html = Dejavu::render_source(&layout_source, &ctx).map_err(|e| {
+    let html = Dejavu::render_source_with(&layout_source, &ctx, &doki_language()).map_err(|e| {
         CoreError::build(format!(
-            "dejavu render failed for `{}` (layout {layout_id}): {e}",
+            "doki render failed for `{}` (layout {layout_id}): {e}",
             node.rel_path
         ))
     })?;
@@ -200,7 +217,7 @@ mod tests {
         std::fs::create_dir_all(&layouts).unwrap();
         std::fs::write(
             layouts.join("layout.dejavu"),
-            "<wrap><% title %>:<% content %></wrap>\n",
+            "<wrap>{% title %}:{% content %}</wrap>\n",
         )
         .unwrap();
         let cfg = ProjectConfig {
