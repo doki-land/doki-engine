@@ -1,0 +1,25 @@
+{
+  "name": "@doki-land/doki-linux-arm64",
+  "version": "0.0.0",
+  "description": "Platform binary for @doki-land/doki (linux-arm64-gnu)",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "doki-core.linux-arm64-gnu.node",
+  "files": [
+    "doki-core.linux-arm64-gnu.node"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doki-land/doki-engine.git",
+    "directory": "compilers/doki-node/npm/linux-arm64-gnu"
+  }
+}
