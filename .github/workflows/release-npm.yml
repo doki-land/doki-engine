@@ -83,12 +83,6 @@ jobs:
           - os: ubuntu-24.04-arm
             host: linux-arm64-gnu
             rust_target: aarch64-unknown-linux-gnu
-          # musl: Alpine container on x64 only (JS Actions unsupported in Alpine on Arm64).
-          - os: ubuntu-latest
-            host: linux-x64-musl
-            rust_target: x86_64-unknown-linux-musl
-            container: node:20-alpine
-
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     timeout-minutes: 60
@@ -128,10 +122,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
-
-      - name: Add Rust target (Alpine)
-        if: contains(matrix.host, 'musl')
-        run: rustup target add ${{ matrix.rust_target }}
 
       - name: Install napi workspace deps
         working-directory: doki-engine/compilers/doki-node
@@ -205,7 +195,7 @@ jobs:
             echo "staged $host -> npm/${npm_dir}"
           done
           echo "staged $staged / expected $expected platform binaries"
-          test "$staged" -ge 6
+          test "$staged" -ge 5
 
       - name: Guard ? refuse wrong package versions
         env:
