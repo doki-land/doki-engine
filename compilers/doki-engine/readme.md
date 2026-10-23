@@ -1,30 +1,22 @@
-# Doki Engine (legacy package tree)
+# Doki Engine (legacy TypeScript tree)
 
-Formal product entry is **`@doki-land/doki`** (CLI + N-API loader) with platform packages `@doki-land/doki-<sys>`, backed by Rust crates `doki-core` / `doki-node`.
+**Do not use.** This directory is the frozen legacy TypeScript builder. The actual product entry is:
 
-This tree’s TypeScript `Builder` / `PluginManager` / shortcode APIs are **not** the build authority—calls throw. Do not copy the old programmatic samples below from history.
+- **`@doki-land/doki`** — Node CLI + N-API loader
+- **`doki-core`** — Rust SSG build kernel (this repo, under `compilers/doki-core/`)
 
-## Install / use
+The old TypeScript `Builder` / `PluginManager` / shortcode APIs here **throw on call**. Do not copy old programmatic samples from git history.
 
-```bash
-pnpm add -g @doki-land/doki
-# or in a site: pnpm add -D @doki-land/doki
-doki new my-site
-cd my-site
-pnpm build   # → doki build
-pnpm dev     # → doki dev
-```
+## Where to work
 
-Configure with **`doki.toml`** only. Layout templates use **Dejavu** (`<% %>` / `|>`), not Liquid `{{ }}` / `{% %}`.
-
-See:
-
-- `documentation/index.md`
-- `documentation/guide/index.md`
-- `documentation/architecture/index.md`
-
-Internal decisions live under Spark `决策和进度表/doki-rust-build-kernel.md` (not here).
+| What you want                 | Go here                                     |
+|-------------------------------|---------------------------------------------|
+| New build / content feature   | `compilers/doki-core/` (Rust)              |
+| New plugin hook               | `compilers/doki-core/src/session.rs` → hook plan |
+| CLI change / npm resolution   | `runtimes/doki/`                            |
+| Dejavu render issue           | [`doki-core/src/render.rs`](../doki-core/src/render.rs) or [`dejavu-language`](https://github.com/doki-land/dejavu-language) |
+| Template language grammar     | `dejavu-language` repo (Dejavu Template Contract) |
 
 ## License
 
-MIT License © Doki Land
+[MIT](../../License.md) © Doki Land

@@ -1,9 +1,9 @@
-# doki-migrate (private / not published)
+# doki-migrate — private historical code
 
-**Do not publish this package.** Migrate is a CLI subcommand of [`@doki-land/doki`](../../runtimes/doki):
+**Do not extend.** This directory holds legacy migration helpers from before the unified CLI. New migrate work belongs in `runtimes/doki/` (the product CLI).
 
-```bash
-doki migrate …
-```
+Current CLI entry: `doki migrate <source> <target>` — implemented in `runtimes/doki/src/cli.mjs`.
 
-This directory is workspace-private legacy code. New work belongs under `runtimes/doki`.
+## License
+
+[MIT](../../License.md) © Doki Land

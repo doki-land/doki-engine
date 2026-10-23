@@ -1,12 +1,7 @@
-# doki-deploy (private / not published)
+# doki-deploy — private historical code
 
-**Do not publish this package.** Deploy is a CLI subcommand of [`@doki-land/doki`](../../runtimes/doki):
+**Do not extend.** This directory holds legacy deploy helper stubs. Deploy is now a first-class `doki deploy` CLI subcommand implemented in `runtimes/doki/src/cli.mjs`, with GitHub Actions + Netlify + Vercel + Cloudflare Pages templates in `.github/workflows/`.
 
-```bash
-doki deploy netlify
-doki deploy vercel
-doki deploy github
-doki deploy cloudflare
-```
+## License
 
-This directory is workspace-private legacy code. New work belongs under `runtimes/doki`.
+[MIT](../../License.md) © Doki Land

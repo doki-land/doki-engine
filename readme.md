@@ -1,20 +1,22 @@
 # 🌐 Doki Engine
 
-**A static-site generator for Markdown, templates, themes, and npm plugins.**
+**A static-site generator for Markdown, Dejavu templates, themes, and npm plugins.**
 
-Turn a content directory into a deployable static site: Markdown, Dejavu templates, themes, and i18n — all file-based.
+Turn a content directory into a deployable static site — Markdown with front matter for content, Dejavu templates (with **Doki-style `{% %}` delimiters**) for layouts, themes for visual defaults, and plugins for hooks. Everything is file-based; no hosted control plane.
 
-Templates are adapted through `@doki-land/dejavu-engine`. **Language semantics follow the Dejavu Template Contract.** Install `@doki-land/doki`, configure `doki.toml`, and run `doki build` / `doki dev`.
+Build kernel lives in Rust (`doki-core` crate, consumes the `dejavu` public crate for rendering). The CLI and plugin host are Node.
+
+Repository: [`doki-land/doki-engine`](https://github.com/doki-land/doki-engine/tree/dev) (`dev`).
 
 ## 🧭 Mental model
 
-| You provide | Doki produces |
-| --- | --- |
-| Markdown with front matter | Rendered pages and feeds |
-| Doki templates | Reusable layouts and shells |
-| A theme (npm or local) | Visual defaults and components |
-| Plugins (npm) | Hooks into build / content |
-| Site / build config | A static `dist/` tree |
+| You provide                  | Doki produces               |
+|------------------------------|-----------------------------|
+| `content/*.md` with front matter | Rendered pages, feeds, and sitemap |
+| `layouts/*.doki` or `*.html` | Reusable layouts (`{% extends %}`, `{% block %}`, `{% include %}`) |
+| A theme (npm package or local) | Visual defaults + shortcodes |
+| Plugins (`@doki-land/doki-plugin-*`) | Hooks into build/content/events |
+| `doki.toml` + optional `package.json` | A static `dist/` tree ready for any web host |
 
 ## ✍️ Content looks like this
 
@@ -29,16 +31,27 @@ tags: [notes, doki]
 Write the body in Markdown; let the theme handle presentation.
 ```
 
-Templates read page and site data through Doki syntax. Build semantics live in Rust (N-API); Node orchestrates the CLI, npm resolution, and plugins. The TypeScript builder in this repository is transitional.
+Layouts look like Dejavu with Doki delimiters:
+
+```doki
+<!DOCTYPE html>
+<html lang="{% site.lang %}">
+<head><title>{% page.title %}</title></head>
+<body>
+  {% content %}
+</body>
+</html>
+```
 
 ## ✨ Why pick it
 
 - File-based content that works well with Git
-- Markdown-first authoring
+- Markdown-first authoring, Dejavu-powered layouts
 - Themes and layouts without a hosted control plane
 - Built-in internationalization
-- Plain static output for any ordinary web host
+- Plain static output for any ordinary web host (Cloudflare Pages, Netlify, Vercel, GitHub Pages, your Nginx)
 - Plugin ecosystem on npm (`@doki-land/doki-plugin-*`)
+- Rust build kernel — fast, no Node-only rendering path
 
 ## 🚀 Get started
 
@@ -46,13 +59,59 @@ Templates read page and site data through Doki syntax. Build semantics live in R
 pnpm add -g @doki-land/doki
 doki new my-site
 cd my-site
-pnpm dev
+doki dev        # → http://localhost:4000
+doki build      # → dist/
 ```
 
-Build with `doki build`; output goes to `dist/`.
+## 🗂 Repository layout
+
+| Path                            | Role                                                  |
+|---------------------------------|-------------------------------------------------------|
+| `compilers/doki-core/`          | Rust SSG build kernel (config, content graph, render, session) |
+| `compilers/doki-node/`          | N-API build workspace — private, builds the `.node` addon |
+| `compilers/doki-engine/`        | Legacy TypeScript builder tree — **do not use**       |
+| `compilers/doki-lsp/`           | Legacy TS/LSP path — **do not use**, editors use `dejavu lsp` |
+| `compilers/doki-migrate/`       | Legacy migrate CLI — private historical code           |
+| `compilers/doki-deploy/`        | Legacy deploy CLI — private historical code           |
+| `runtimes/doki/`                | `@doki-land/doki` product CLI (Node wrapper + native loader) |
+| `runtimes/themes/`              | Default theme + theme template                        |
+| `runtimes/plugins/`              | Plugin template + example plugins                     |
+| `runtimes/editors/`             | VS Code extension                                     |
+| `runtimes/homepage/`            | doki.engine homepage (self-built)                     |
+| `examples/`                     | Historical /不均衡 examples — prefer `doki new my-site` |
+| `scripts/`                      | Release, pack, stage, smoke test scripts              |
+
+## 🛠 Development
+
+Requires Rust toolchain + Node.js 20+ + pnpm 10.
+
+```bash
+# Rust workspace
+cargo test --workspace
+
+# Node workspace + N-API
+pnpm install
+pnpm --filter @doki-land/doki build     # builds + stages the native addon
+pnpm --filter @doki-land/doki test
+
+# Standalone N-API debug build
+cd compilers/doki-node
+npm run build:debug
+npm test
+```
+
+## 📚 Documentation
+
+End-user docs ship with `@doki-land/doki`. Architecture and contributor docs live in `documentation/`:
+
+| Kind                  | Start here                                                      |
+|-----------------------|-----------------------------------------------------------------|
+| Architecture overview | [`documentation/architecture/index.md`](./documentation/architecture/index.md) |
+| Guide index           | [`documentation/guide/index.md`](./documentation/guide/index.md)       |
+| Grammar reference     | [`documentation/grammar/index.md`](./documentation/grammar/index.md)   |
+
+For template language details, see the Dejavu project docs at [`dejavu-language`](https://github.com/doki-land/dejavu-language) — Doki's template engine **is** Dejavu with `{% %}` delimiters.
 
 ## 📄 License
 
-MIT License © Doki Land
-
-> Repository and package `README` files are English. Product docs for end users live with each site; Dejavu’s user docs are under `dejavu-language/projects/dejavu.ts/homepage/documents/{en-us,zh-hans}`.
+[MIT](./License.md) © Doki Land
