@@ -1,6 +1,7 @@
-import { defineConfig } from "@doki-land/nifty"
-
-export default defineConfig({
+// Nifty publish/trust config for doki-engine.
+// Plain object — nifty CLI reads it directly; no @doki-land/nifty import required
+// (avoids needing a local npm install that's blocked by placeholder deps).
+export default {
     publish: {
         packages: [
             '@doki-land/doki',
@@ -18,7 +19,7 @@ export default defineConfig({
         npm: {
             repo: 'doki-land/doki-engine',
             file: 'release-npm.yml',
-            env: '',
+            environment: 'NPM_PUBLISH',
         },
     },
-})
+};
