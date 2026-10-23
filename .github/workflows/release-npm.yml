@@ -98,8 +98,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: doki-land/dejavu-language
-          # doki-engine tag vX.Y.Z requires matching dejavu-language tag vX.Y.Z
-          ref: ${{ github.ref }}
+          # Cargo path dep points at dejavu-language dev HEAD (local dev parity).
+          # Tag-aligned refs would require both repos to bump in lockstep — use dev.
+          ref: dev
           path: dejavu-language
 
       - name: Alpine build deps (musl hosts only)
