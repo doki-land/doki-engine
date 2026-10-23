@@ -1,32 +1,32 @@
 {
-  "name": "@doki-land/doki-plugin",
-  "version": "0.0.2",
-  "description": "definePlugin helpers for Doki extensions (no build semantics)",
-  "license": "MIT",
-  "type": "module",
-  "main": "./index.js",
-  "types": "./index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "default": "./index.js"
+    "name": "@doki-land/doki-plugin",
+    "version": "0.0.3",
+    "description": "definePlugin helpers for Doki extensions (no build semantics)",
+    "license": "MIT",
+    "type": "module",
+    "main": "./index.js",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "import": "./index.js",
+            "default": "./index.js"
+        }
+    },
+    "files": [
+        "index.js",
+        "index.d.ts"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/doki-land/doki-engine.git",
+        "directory": "runtimes/plugins/doki-plugin"
     }
-  },
-  "files": [
-    "index.js",
-    "index.d.ts"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/doki-land/doki-engine.git",
-    "directory": "runtimes/plugins/doki-plugin"
-  }
 }
