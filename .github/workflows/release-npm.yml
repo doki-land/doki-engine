@@ -74,7 +74,7 @@ jobs:
           - os: macos-latest
             host: darwin-arm64
             rust_target: aarch64-apple-darwin
-          - os: macos-13
+          - os: macos-latest
             host: darwin-x64
             rust_target: x86_64-apple-darwin
           - os: ubuntu-latest
