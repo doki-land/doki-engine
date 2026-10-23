@@ -79,40 +79,20 @@ export const PLATFORM_PACKAGES = [
     name: '@doki-land/doki-darwin-arm64',
     os: ['darwin'],
     cpu: ['arm64'],
-  },
-  {
+  },  {
     host: 'linux-x64-gnu',
-    npmDir: 'linux-x64-gnu',
+    npmDir: 'linux-x64',
     rustTarget: 'x86_64-unknown-linux-gnu',
-    name: '@doki-land/doki-linux-x64-gnu',
+    name: '@doki-land/doki-linux-x64',
     os: ['linux'],
     cpu: ['x64'],
-  },
-  {
+  },  {
     host: 'linux-arm64-gnu',
-    npmDir: 'linux-arm64-gnu',
+    npmDir: 'linux-arm64',
     rustTarget: 'aarch64-unknown-linux-gnu',
-    name: '@doki-land/doki-linux-arm64-gnu',
+    name: '@doki-land/doki-linux-arm64',
     os: ['linux'],
     cpu: ['arm64'],
-  },
-  {
-    host: 'linux-x64-musl',
-    npmDir: 'linux-x64-musl',
-    rustTarget: 'x86_64-unknown-linux-musl',
-    name: '@doki-land/doki-linux-x64-musl',
-    os: ['linux'],
-    cpu: ['x64'],
-    libc: 'musl',
-  },
-  {
-    host: 'linux-arm64-musl',
-    npmDir: 'linux-arm64-musl',
-    rustTarget: 'aarch64-unknown-linux-musl',
-    name: '@doki-land/doki-linux-arm64-musl',
-    os: ['linux'],
-    cpu: ['arm64'],
-    libc: 'musl',
   },
 ]
 
@@ -124,10 +104,8 @@ export const NAPI_REQUIRE_REWRITES = [
   ['@doki-land/doki-core-win32-arm64-msvc', '@doki-land/doki-win32-arm64'],
   ['@doki-land/doki-core-darwin-x64', '@doki-land/doki-darwin-x64'],
   ['@doki-land/doki-core-darwin-arm64', '@doki-land/doki-darwin-arm64'],
-  ['@doki-land/doki-core-linux-x64-gnu', '@doki-land/doki-linux-x64-gnu'],
-  ['@doki-land/doki-core-linux-arm64-gnu', '@doki-land/doki-linux-arm64-gnu'],
-  ['@doki-land/doki-core-linux-x64-musl', '@doki-land/doki-linux-x64-musl'],
-  ['@doki-land/doki-core-linux-arm64-musl', '@doki-land/doki-linux-arm64-musl'],
+  ['@doki-land/doki-core-linux-x64-gnu', '@doki-land/doki-linux-x64'],
+  ['@doki-land/doki-core-linux-arm64-gnu', '@doki-land/doki-linux-arm64'],
 ]
 
 export function optionalDepsMap(version = SMOKE_VERSION) {
