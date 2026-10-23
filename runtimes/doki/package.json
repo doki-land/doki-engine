@@ -1,6 +1,6 @@
 {
   "name": "@doki-land/doki",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Doki — Node CLI + N-API Rust build kernel (user-facing entry)",
   "license": "MIT",
   "type": "module",

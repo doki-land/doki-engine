@@ -7,13 +7,6 @@ packages:
   - 'examples/*'
   - '!runtimes/plugins/doki-plugin-template'
   - '!runtimes/themes/doki-theme-template'
-  # Optional sibling Dejavu TS packages (legacy compiler trees may still reference).
-  - '../dejavu-language/projects/dejavu.ts/dejavu'
-  - '../dejavu-language/projects/dejavu.ts/dejavu-engine'
-  - '../dejavu-language/projects/dejavu.ts/dejavu-language'
-  - '../dejavu-language/projects/dejavu.ts/dejavu-types'
-  - '../dejavu-language/projects/dejavu.ts/dejavu-tools'
-  - '../dejavu-language/projects/dejavu.ts/hono-dejavu'
 allowBuilds:
   '@parcel/watcher': set this to true or false
   '@vscode/vsce-sign': set this to true or false
