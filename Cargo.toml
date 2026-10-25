@@ -24,4 +24,4 @@ sha2 = "0.10"
 thiserror = "2"
 toml = "0.8"
 hex = "0.4"
-dejavu = { path = "../dejavu-language/projects/crates/dejavu" }
+dejavu = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu" }
