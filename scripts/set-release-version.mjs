@@ -98,3 +98,24 @@ for (const pkg of LEGACY_PACKAGES) {
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`)
   console.log(`set legacy ${pkg.name}@${version}`)
 }
+
+// Scaffold templates ship inside `@doki-land/doki` with a placeholder pin so
+// the repo stays version-agnostic; published tarballs must point at the
+// release version or `doki new` installs a stale engine.
+for (const rel of [
+  'runtimes/doki/templates/minimal/package.json',
+  'runtimes/doki/templates/blog/package.json',
+]) {
+  const file = join(root, rel)
+  if (!existsSync(file)) continue
+  const json = JSON.parse(readFileSync(file, 'utf8'))
+  for (const field of ['dependencies', 'devDependencies']) {
+    const deps = json[field]
+    if (!deps) continue
+    for (const name of Object.keys(deps)) {
+      if (names.has(name)) deps[name] = version
+    }
+  }
+  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`)
+  console.log(`pinned scaffold ${rel}`)
+}

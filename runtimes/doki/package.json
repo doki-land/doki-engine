@@ -31,7 +31,7 @@
         "stage:native": "node ../../scripts/stage-doki-native.mjs"
     },
     "dependencies": {
-        "@doki-land/doki-plugin": "0.0.0"
+        "@doki-land/doki-plugin": "workspace:*"
     },
     "optionalDependencies": {
         "@doki-land/doki-win32-x64": "0.0.0",
