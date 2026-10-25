@@ -1,17 +1,17 @@
-{% extends "layout.html" %}
+<% extends "layout.html" %>
 
-{% block title %}{% site.title %} - Home{% end block %}
+<% block title %><% site.title %> - Home<% end block %>
 
-{% block content %}
+<% block content %>
 <section class="posts">
-  {% loop page in pages %}
+  <% loop page in pages %>
   <article class="post">
-    <h2><a href="{% page.url %}">{% page.title %}</a></h2>
-    <time datetime="{% page.date |> date: '%Y-%m-%d' %}">{% page.date |> date: '%Y-%m-%d' %}</time>
-    {% if page.summary %}
-    <p>{% page.summary %}</p>
-    {% end if %}
+    <h2><a href="<% page.url %>"><% page.title %></a></h2>
+    <time datetime="<% page.date |> date: '%Y-%m-%d' %>"><% page.date |> date: '%Y-%m-%d' %></time>
+    <% if page.summary %>
+    <p><% page.summary %></p>
+    <% end if %>
   </article>
-  {% end loop %}
+  <% end loop %>
 </section>
-{% end block %}
+<% end block %>

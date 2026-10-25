@@ -1,13 +1,13 @@
-{% extends "layout.html" %}
+<% extends "layout.html" %>
 
-{% block content %}
+<% block content %>
 <article>
-    <h2>{% page.title %}</h2>
+    <h2><% page.title %></h2>
 
-    {% if page.date %}
-    <p class="date">{% page.date %}</p>
-    {% end if %}
+    <% if page.date %>
+    <p class="date"><% page.date %></p>
+    <% end if %>
 
-    {% content |> raw %}
+    <% content |> safe %>
 </article>
-{% end block %}
+<% end block %>

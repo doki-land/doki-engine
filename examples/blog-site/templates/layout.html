@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="{% site.lang %}">
+<html lang="<% site.lang %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% site.title %}{% if page.title %} - {% page.title %}{% end if %}</title>
-    <meta name="description" content="{% site.description %}">
+    <title><% site.title %><% if page.title %> - <% page.title %><% end if %></title>
+    <meta name="description" content="<% site.description %>">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <header>
         <div class="container">
-            <h1><a href="/">{% site.title %}</a></h1>
+            <h1><a href="/"><% site.title %></a></h1>
             <nav>
                 <ul>
                     <li><a href="/">Home</a></li>
@@ -23,13 +23,13 @@
 
     <main>
         <div class="container">
-            {% block content %}{% end block %}
+            <% block content %><% end block %>
         </div>
     </main>
 
     <footer>
         <div class="container">
-            <p>&copy; {% now |> date: '%Y' %} {% site.author %}</p>
+            <p>&copy; <% now |> date: '%Y' %> <% site.author %></p>
         </div>
     </footer>
 </body>

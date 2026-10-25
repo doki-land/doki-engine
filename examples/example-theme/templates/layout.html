@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+<% extends "base.html" %>
 
-{% block body %}
+<% block body %>
 <header class="site-header">
     <div class="container">
         <h1 class="site-title">
-            <a href="/">{% site.title %}</a>
+            <a href="/"><% site.title %></a>
         </h1>
         <nav class="site-nav">
             <ul>
@@ -18,13 +18,13 @@
 
 <main class="site-main">
     <div class="container">
-        {% block content %}{% end block %}
+        <% block content %><% end block %>
     </div>
 </main>
 
 <footer class="site-footer">
     <div class="container">
-        <p>&copy; {% now |> date: '%Y' %} {% site.author %}. Powered by Doki Engine.</p>
+        <p>&copy; <% now |> date: '%Y' %> <% site.author %>. Powered by Doki Engine.</p>
     </div>
 </footer>
-{% end block %}
+<% end block %>

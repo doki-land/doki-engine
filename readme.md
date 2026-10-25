@@ -2,7 +2,7 @@
 
 **A static-site generator for Markdown, Dejavu templates, themes, and npm plugins.**
 
-Turn a content directory into a deployable static site — Markdown with front matter for content, Dejavu templates (with **Doki-style `{% %}` delimiters**) for layouts, themes for visual defaults, and plugins for hooks. Everything is file-based; no hosted control plane.
+Turn a content directory into a deployable static site — Markdown with front matter for content, Dejavu templates (with Dejavu's default **`<% %>` delimiters**) for layouts, themes for visual defaults, and plugins for hooks. Everything is file-based; no hosted control plane.
 
 Build kernel lives in Rust (`doki-core` crate, consumes the `dejavu` public crate for rendering). The CLI and plugin host are Node.
 
@@ -13,7 +13,7 @@ Repository: [`doki-land/doki-engine`](https://github.com/doki-land/doki-engine/t
 | You provide                  | Doki produces               |
 |------------------------------|-----------------------------|
 | `content/*.md` with front matter | Rendered pages, feeds, and sitemap |
-| `layouts/*.doki` or `*.html` | Reusable layouts (`{% extends %}`, `{% block %}`, `{% include %}`) |
+| `layouts/*.doki` or `*.html` | Reusable layouts (`<% extends %>`, `<% block %>`, `<% include %>`) |
 | A theme (npm package or local) | Visual defaults + shortcodes |
 | Plugins (`@doki-land/doki-plugin-*`) | Hooks into build/content/events |
 | `doki.toml` + optional `package.json` | A static `dist/` tree ready for any web host |
@@ -31,14 +31,14 @@ tags: [notes, doki]
 Write the body in Markdown; let the theme handle presentation.
 ```
 
-Layouts look like Dejavu with Doki delimiters:
+Layouts look like Dejavu with its default delimiters:
 
 ```doki
 <!DOCTYPE html>
-<html lang="{% site.lang %}">
-<head><title>{% page.title %}</title></head>
+<html lang="<% site.lang %>">
+<head><title><% page.title %></title></head>
 <body>
-  {% content %}
+  <% content |> safe %>
 </body>
 </html>
 ```
@@ -48,7 +48,6 @@ Layouts look like Dejavu with Doki delimiters:
 - File-based content that works well with Git
 - Markdown-first authoring, Dejavu-powered layouts
 - Themes and layouts without a hosted control plane
-- Built-in internationalization
 - Plain static output for any ordinary web host (Cloudflare Pages, Netlify, Vercel, GitHub Pages, your Nginx)
 - Plugin ecosystem on npm (`@doki-land/doki-plugin-*`)
 - Rust build kernel — fast, no Node-only rendering path
@@ -110,7 +109,7 @@ End-user docs ship with `@doki-land/doki`. Architecture and contributor docs liv
 | Guide index           | [`documentation/guide/index.md`](./documentation/guide/index.md)       |
 | Grammar reference     | [`documentation/grammar/index.md`](./documentation/grammar/index.md)   |
 
-For template language details, see the Dejavu project docs at [`dejavu-language`](https://github.com/doki-land/dejavu-language) — Doki's template engine **is** Dejavu with `{% %}` delimiters.
+For template language details, see the Dejavu project docs at [`dejavu-language`](https://github.com/doki-land/dejavu-language) — Doki's template engine **is** Dejavu with its default `<% %>` delimiters.
 
 ## 📄 License
 

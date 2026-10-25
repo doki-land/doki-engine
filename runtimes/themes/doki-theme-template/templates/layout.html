@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="{% site.lang |> default: 'en' %}">
+<html lang="<% site.lang |> default: 'en' %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}{% site.title %}{% end block %}</title>
+  <title><% block title %><% site.title %><% end block %></title>
   <link rel="stylesheet" href="/static/css/style.css">
-  {% block head %}{% end block %}
+  <% block head %><% end block %>
 </head>
 <body>
   <header>
     <nav>
-      <a href="/">{% site.title %}</a>
+      <a href="/"><% site.title %></a>
     </nav>
   </header>
 
   <main>
-    {% block content %}{% end block %}
+    <% block content %><% end block %>
   </main>
 
   <footer>
-    <p>&copy; {% now |> date: '%Y' %} {% site.title %}</p>
+    <p>&copy; <% now |> date: '%Y' %> <% site.title %></p>
   </footer>
 </body>
 </html>

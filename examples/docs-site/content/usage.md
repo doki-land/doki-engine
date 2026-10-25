@@ -135,7 +135,7 @@ Layout templates define the overall structure of your pages. Here's an example `
     </main>
     <footer>
         <div class="container">
-            <p>&copy; {% now |> date: "%Y" %} {% site.author %}. All rights reserved.</p>
+            <p>&copy; <% now |> date: "%Y" %> <% site.author %>. All rights reserved.</p>
         </div>
     </footer>
 </body>
@@ -339,7 +339,7 @@ Access categories and tags in your templates:
     <% for category in categories %>
         <li>
             <a href="{{ category.url }}">{{ category.name }}</a>
-            <span>({% category.posts |> length %})</span>
+            <span>(<% category.posts |> length %>)</span>
         </li>
     <% endfor %>
 </ul>
@@ -349,7 +349,7 @@ Access categories and tags in your templates:
     <% for tag in tags %>
         <li>
             <a href="{{ tag.url }}">{{ tag.name }}</a>
-            <span>({% tag.posts |> length %})</span>
+            <span>(<% tag.posts |> length %>)</span>
         </li>
     <% endfor %>
 </ul>
@@ -380,7 +380,7 @@ module.exports = {
 Use the filter in your templates:
 
 ```html
-<p>{% page.title |> uppercase %}</p>
+<p><% page.title |> uppercase %></p>
 ```
 
 ## Conclusion

@@ -1,21 +1,21 @@
-{% extends "layout.html" %}
+<% extends "layout.html" %>
 
-{% block content %}
+<% block content %>
 <article class="post">
-    <h1>{% page.title %}</h1>
+    <h1><% page.title %></h1>
     <div class="post-meta">
-        By {% page.author %} on {% page.date %}
+        By <% page.author %> on <% page.date %>
     </div>
     <div class="categories">
-        <span class="category">{% page.category %}</span>
+        <span class="category"><% page.category %></span>
     </div>
     <div class="tags">
-        {% loop tag in page.tags %}
-        <span class="tag">{% tag %}</span>
-        {% end loop %}
+        <% loop tag in page.tags %>
+        <span class="tag"><% tag %></span>
+        <% end loop %>
     </div>
     <div class="content">
-        {% content |> raw %}
+        <% content |> safe %>
     </div>
 </article>
-{% end block %}
+<% end block %>

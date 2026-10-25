@@ -38,30 +38,30 @@ pnpm add @doki/theme-default
 
 ## 📝 Templates
 
-Filter pipe is **`|>`**. Delimiters are `{% %}` / `{# #}`. Closers: `end if` / `end loop` / `end block`.
+Filter pipe is **`|>`**. Delimiters are `<% %>` / `<# #>`. Closers: `end if` / `end loop` / `end block`.
 
 ### layout.html
 
 ```html
 <!DOCTYPE html>
-<html lang="{% site.lang %}">
+<html lang="<% site.lang %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% site.title %}{% if page.title %} - {% page.title %}{% end if %}</title>
+  <title><% site.title %><% if page.title %> - <% page.title %><% end if %></title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <header>
     <nav>
-      <a href="/" class="logo">{% site.title %}</a>
+      <a href="/" class="logo"><% site.title %></a>
     </nav>
   </header>
   <main>
-    {% block content %}{% end block %}
+    <% block content %><% end block %>
   </main>
   <footer>
-    <p>&copy; {% now |> date: '%Y' %} {% site.author %}</p>
+    <p>&copy; <% now |> date: '%Y' %> <% site.author %></p>
   </footer>
 </body>
 </html>
@@ -70,35 +70,35 @@ Filter pipe is **`|>`**. Delimiters are `{% %}` / `{# #}`. Closers: `end if` / `
 ### index.html
 
 ```html
-{% extends "layout.html" %}
-{% block content %}
+<% extends "layout.html" %>
+<% block content %>
 <section class="posts">
-  {% loop post in pages %}
+  <% loop post in pages %>
   <article>
-    <h2><a href="{% post.url %}">{% post.title %}</a></h2>
-    <time>{% post.date |> date: '%Y-%m-%d' %}</time>
-    <p>{% post.description %}</p>
+    <h2><a href="<% post.url %>"><% post.title %></a></h2>
+    <time><% post.date |> date: '%Y-%m-%d' %></time>
+    <p><% post.description %></p>
   </article>
-  {% end loop %}
+  <% end loop %>
 </section>
-{% end block %}
+<% end block %>
 ```
 
 ### post.html
 
 ```html
-{% extends "layout.html" %}
-{% block content %}
+<% extends "layout.html" %>
+<% block content %>
 <article class="post">
   <header>
-    <h1>{% page.title %}</h1>
-    <time>{% page.date |> date: '%Y-%m-%d' %}</time>
+    <h1><% page.title %></h1>
+    <time><% page.date |> date: '%Y-%m-%d' %></time>
   </header>
   <div class="content">
-    {% content |> raw %}
+    <% content |> safe %>
   </div>
 </article>
-{% end block %}
+<% end block %>
 ```
 
 ## 🎨 Styling

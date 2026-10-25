@@ -1,40 +1,40 @@
-{% extends "layout.html" %}
+<% extends "layout.html" %>
 
-{% block content %}
+<% block content %>
 <section class="posts-list">
     <h2>最新文章</h2>
-    {% loop post in pages %}
+    <% loop post in pages %>
     <article class="post-card">
         <h3 class="post-card-title">
-            <a href="{% post.url %}">{% post.title %}</a>
+            <a href="<% post.url %>"><% post.title %></a>
         </h3>
         <div class="post-card-meta">
-            <time datetime="{% post.date |> date: '%Y-%m-%d' %}">
-                {% post.date |> date: '%Y年%m月%d日' %}
+            <time datetime="<% post.date |> date: '%Y-%m-%d' %>">
+                <% post.date |> date: '%Y年%m月%d日' %>
             </time>
-            <span class="post-card-author">{% post.author %}</span>
+            <span class="post-card-author"><% post.author %></span>
         </div>
-        <p class="post-card-excerpt">{% post.description |> default: post.excerpt %}</p>
-        {% if post.tags %}
+        <p class="post-card-excerpt"><% post.description |> default: post.excerpt %></p>
+        <% if post.tags %>
         <div class="post-card-tags">
-            {% loop tag in post.tags %}
-            <span class="tag">{% tag %}</span>
-            {% end loop %}
+            <% loop tag in post.tags %>
+            <span class="tag"><% tag %></span>
+            <% end loop %>
         </div>
-        {% end if %}
+        <% end if %>
     </article>
-    {% end loop %}
+    <% end loop %>
 </section>
 
-{% if pagination %}
+<% if pagination %>
 <nav class="pagination">
-    {% if pagination.prev %}
-    <a href="{% pagination.prev.url %}" class="prev">上一页</a>
-    {% end if %}
-    <span class="page-info">第 {% pagination.current %} 页，共 {% pagination.total %} 页</span>
-    {% if pagination.next %}
-    <a href="{% pagination.next.url %}" class="next">下一页</a>
-    {% end if %}
+    <% if pagination.prev %>
+    <a href="<% pagination.prev.url %>" class="prev">上一页</a>
+    <% end if %>
+    <span class="page-info">第 <% pagination.current %> 页，共 <% pagination.total %> 页</span>
+    <% if pagination.next %>
+    <a href="<% pagination.next.url %>" class="next">下一页</a>
+    <% end if %>
 </nav>
-{% end if %}
-{% end block %}
+<% end if %>
+<% end block %>

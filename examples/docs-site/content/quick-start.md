@@ -91,7 +91,7 @@ layout = "layout"
        </main>
        <footer>
            <div class="container">
-               <p>&copy; {% now |> date: "%Y" %} {% site.author %}. All rights reserved.</p>
+               <p>&copy; <% now |> date: "%Y" %> <% site.author %>. All rights reserved.</p>
            </div>
        </footer>
    </body>

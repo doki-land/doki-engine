@@ -1,4 +1,4 @@
-<div class="alert alert-{% type |> default: 'info' %}">
-    {% if title %}<strong>{% title %}</strong>{% end if %}
-    {% content |> raw %}
+<div class="alert alert-<% type |> default: 'info' %>">
+    <% if title %><strong><% title %></strong><% end if %>
+    <% content |> safe %>
 </div>
