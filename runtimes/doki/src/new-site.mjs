@@ -11,11 +11,11 @@ const TEMPLATES_ROOT = path.join(
 
 const REPO_PLUGINS = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../../plugins',
+  '../../plugins',
 )
 const REPO_THEMES = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../../themes',
+  '../../themes',
 )
 
 /**
@@ -68,7 +68,7 @@ export function createSite(targetDir, templateName = 'minimal') {
 }
 
 function vendorThemePlain(root) {
-  const themeSrc = path.join(REPO_THEMES, 'theme-plain')
+  const themeSrc = path.join(REPO_THEMES, 'doki-theme-plain')
   const themeDest = path.join(root, 'themes', 'plain')
   if (fs.existsSync(themeSrc)) {
     copyDir(themeSrc, themeDest)
@@ -95,7 +95,7 @@ function vendorOfficialPlugins(root, plugins) {
     if (fs.existsSync(entry)) {
       let src = fs.readFileSync(entry, 'utf8')
       src = src.replace(
-        /import \{ definePlugin \} from '@doki-land\/plugin'\r?\n\r?\n/,
+        /import \{ definePlugin \} from '@doki-land\/doki-plugin'\r?\n\r?\n/,
         'function definePlugin(p) { return p }\n\n',
       )
       src = src.replace(`id: '${packageId}'`, `id: './plugins/${destName}'`)
