@@ -1,6 +1,6 @@
 {
     "name": "@doki-land/doki-plugin",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "definePlugin helpers for Doki extensions (no build semantics)",
     "license": "MIT",
     "type": "module",
