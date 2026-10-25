@@ -1,0 +1,8 @@
+{
+  "templates": "layouts",
+  "assets": "assets",
+  "layouts": {
+    "layout": "layout.dejavu",
+    "page": "layout.dejavu"
+  }
+}

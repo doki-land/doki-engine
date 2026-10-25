@@ -1,0 +1,7 @@
+{
+  "kind": "plugin",
+  "apiVersion": "1",
+  "entry": "index.js",
+  "hooks": ["validateConfig", "contributeArtifacts"],
+  "capabilities": ["artifacts:sitemap"]
+}

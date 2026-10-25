@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="<% site.lang %>">
+<head>
+<meta charset="utf-8"/>
+<title><% page.title %> · <% site.title %></title>
+<meta name="description" content="<% site.description %>"/>
+<link rel="stylesheet" href="/assets/plain.css"/>
+</head>
+<body>
+<header>
+  <a href="/"><% site.title %></a>
+</header>
+<main>
+<% content |> safe %>
+</main>
+<footer>
+  <small><% site.author %></small>
+</footer>
+</body>
+</html>
