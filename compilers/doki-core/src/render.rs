@@ -1,10 +1,12 @@
 //! Page render: Markdown → HTML, then Dejavu **public** facade for layouts.
 //!
 //! Depends only on the `dejavu` crate (not dejavu-language / dejavu-ir / dejavu-engine).
+//! Layouts use the Dejavu default language (`<% %>` code, `<# #>` comments), so Doki does
+//! not carry a private delimiter config that could drift from the upstream default.
 
 use std::path::{Path, PathBuf};
 
-use dejavu::{Dejavu, Language, TemplateConfig};
+use dejavu::Dejavu;
 use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
 
@@ -12,37 +14,19 @@ use crate::config::{ExtensionRef, ProjectConfig};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
 
-/// Doki template delimiters: `{% %}` for code, `{# #}` for comments.
-///
-/// Same as the TypeScript `DOKI_LANGUAGE` in `compilers/doki-engine/src/engine.ts`.
-pub fn doki_language() -> Language {
-    Language {
-        syntax_mode: "template".into(),
-        template: TemplateConfig {
-            code_start: "{%".into(),
-            code_end: "%}".into(),
-            comment_start: "{#".into(),
-            comment_end: "#}".into(),
-            support_filter_pipe: true,
-            legacy_for: false,
-        },
-    }
-}
-
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
-/// Do not use `|> safe` here until the Dejavu public facade on `dejavu-language@dev`
-/// registers that filter. Markdown HTML is trusted host content; for now we emit it
-/// via a plain interpolation (escaped). Themes can opt into raw HTML once `safe` lands.
+/// `content` is Markdown HTML produced by Doki itself, i.e. trusted host content, so
+/// `|> safe` emits it verbatim instead of escaping it.
 pub const DEFAULT_LAYOUT: &str = r#"<!DOCTYPE html>
-<html lang="{% page.lang %}">
+<html lang="<% page.lang %>">
 <head>
 <meta charset="utf-8"/>
-<title>{% page.title %}</title>
+<title><% page.title %></title>
 </head>
 <body>
 <main>
-{% content %}
+<% content |> safe %>
 </main>
 </body>
 </html>
@@ -106,7 +90,7 @@ pub fn render_page(
         "content": content_html,
     });
 
-    let html = Dejavu::render_source_with(&layout_source, &ctx, &doki_language()).map_err(|e| {
+    let html = Dejavu::render_source(&layout_source, &ctx).map_err(|e| {
         CoreError::build(format!(
             "doki render failed for `{}` (layout {layout_id}): {e}",
             node.rel_path
@@ -201,10 +185,9 @@ mod tests {
         );
         let page = render_page(dir.path(), &cfg, None, &node).unwrap();
         assert!(page.html.contains("<title>Hello</title>"));
-        // Until Dejavu ships `safe`/`raw` on origin/dev, builtin layout escapes HTML.
         assert!(
-            page.html.contains("<h1>Heading</h1>") || page.html.contains("&lt;h1&gt;Heading&lt;/h1&gt;"),
-            "expected heading (raw or escaped), got: {}",
+            page.html.contains("<h1>Heading</h1>"),
+            "expected raw heading HTML via `|> safe`, got: {}",
             page.html
         );
         assert!(page.layout_id.starts_with("builtin:"));
@@ -217,7 +200,7 @@ mod tests {
         std::fs::create_dir_all(&layouts).unwrap();
         std::fs::write(
             layouts.join("layout.dejavu"),
-            "<wrap>{% title %}:{% content %}</wrap>\n",
+            "<wrap><% title %>:<% content |> safe %></wrap>\n",
         )
         .unwrap();
         let cfg = ProjectConfig {
@@ -232,8 +215,8 @@ mod tests {
         let page = render_page(dir.path(), &cfg, None, &node).unwrap();
         assert!(page.html.contains("<wrap>T:"));
         assert!(
-            page.html.contains("<em>x</em>") || page.html.contains("&lt;em&gt;x&lt;/em&gt;"),
-            "expected emphasis (raw or escaped), got: {}",
+            page.html.contains("<em>x</em>"),
+            "expected raw emphasis HTML via `|> safe`, got: {}",
             page.html
         );
         assert!(page.layout_id.contains("themes/docs/layouts/layout.dejavu"));
