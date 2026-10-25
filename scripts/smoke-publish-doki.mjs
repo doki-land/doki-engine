@@ -37,6 +37,7 @@ import {
   SMOKE_VERSION,
   findPlatformByHost,
 } from './doki-release-packages.mjs'
+import { detectHost, npmPack, runOk } from './doki-pack-helpers.mjs'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = new Set(process.argv.slice(2))
@@ -45,64 +46,6 @@ const hostArgIdx = process.argv.indexOf('--host')
 const hostOverride = hostArgIdx >= 0 ? process.argv[hostArgIdx + 1] : null
 const otpArgIdx = process.argv.indexOf('--otp')
 const otpOverride = otpArgIdx >= 0 ? process.argv[otpArgIdx + 1] : process.env.NPM_OTP || null
-
-function run(cmd, cmdArgs, opts = {}) {
-  const isWin = process.platform === 'win32'
-  const isNpm = cmd === 'npm' || cmd === 'npm.cmd'
-  // Windows: shell:true + spaced node path (`C:\Program Files\...`) → `'C:\Program' is not recognized`.
-  // npm: shell + short name. node: no shell + process.execPath.
-  const actualCmd = isNpm && isWin ? 'npm' : cmd
-  const { allowFail = false, shell: shellOpt, ...rest } = opts
-  const useShell = shellOpt ?? (isNpm && isWin)
-  const r = spawnSync(actualCmd, cmdArgs, {
-    encoding: 'utf8',
-    windowsHide: true,
-    ...rest,
-    shell: useShell,
-  })
-  if (r.error) {
-    console.error(r.error)
-    throw r.error
-  }
-  if (r.status !== 0 && !allowFail) {
-    console.error(r.stdout)
-    console.error(r.stderr)
-    throw new Error(`${actualCmd} ${cmdArgs.join(' ')} failed (${r.status})`)
-  }
-  return r
-}
-
-function runOk(cmd, cmdArgs, opts = {}) {
-  return run(cmd, cmdArgs, { ...opts, allowFail: false })
-}
-
-function detectHost() {
-  if (hostOverride) return hostOverride
-  const { platform, arch } = process
-  if (platform === 'win32' && arch === 'x64') return 'win32-x64-msvc'
-  if (platform === 'win32' && arch === 'arm64') return 'win32-arm64-msvc'
-  if (platform === 'darwin' && arch === 'arm64') return 'darwin-arm64'
-  if (platform === 'darwin' && arch === 'x64') return 'darwin-x64'
-  if (platform === 'linux' && arch === 'x64') {
-    try {
-      return readFileSync('/usr/bin/ldd', 'utf8').includes('musl')
-        ? 'linux-x64-musl'
-        : 'linux-x64-gnu'
-    } catch {
-      return 'linux-x64-gnu'
-    }
-  }
-  if (platform === 'linux' && arch === 'arm64') {
-    try {
-      return readFileSync('/usr/bin/ldd', 'utf8').includes('musl')
-        ? 'linux-arm64-musl'
-        : 'linux-arm64-gnu'
-    } catch {
-      return 'linux-arm64-gnu'
-    }
-  }
-  throw new Error(`unsupported platform ${platform}/${arch}; pass --host`)
-}
 
 function alignVersions() {
   runOk(process.execPath, [path.join(root, 'scripts/set-release-version.mjs'), SMOKE_VERSION], {
@@ -134,17 +77,6 @@ function stagePlatform(host, builtNode) {
   copyFileSync(builtNode, dest)
   console.log(`staged ${plat.name} → ${dest}`)
   return dir
-}
-
-function npmPack(dir, destDir) {
-  mkdirSync(destDir, { recursive: true })
-  const before = new Set(readdirSync(destDir))
-  runOk('npm', ['pack', '--pack-destination', destDir], { cwd: dir })
-  const added = readdirSync(destDir).filter((f) => f.endsWith('.tgz') && !before.has(f))
-  if (added.length !== 1) {
-    throw new Error(`expected 1 new tarball in ${destDir}, got ${added.join(', ') || '(none)'}`)
-  }
-  return path.join(destDir, added[0])
 }
 
 function publishDir(dir) {
@@ -206,7 +138,7 @@ console.log('install smoke ok');
   }
 }
 
-const host = detectHost()
+const host = detectHost(hostOverride)
 const plat = findPlatformByHost(host)
 console.log(`smoke version=${SMOKE_VERSION} host=${host} publish=${doPublish}`)
 

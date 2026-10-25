@@ -9,6 +9,7 @@
     "test:ts:watch": "vitest",
     "fmt": "biome format --write .",
     "check": "biome check .",
+    "check:packed": "node scripts/check-packed-closure.mjs",
     "push": "wee test && git push",
     "reset": "git reset Head~ --soft"
   },
