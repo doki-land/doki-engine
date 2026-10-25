@@ -1,6 +1,6 @@
 {
     "name": "@doki-land/doki-theme",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "defineTheme helpers for Doki themes (no build semantics)",
     "license": "MIT",
     "type": "module",
