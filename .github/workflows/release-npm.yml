@@ -134,6 +134,17 @@ jobs:
           npx napi build --platform --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml --package doki-node --output-dir .
           node ../../scripts/patch-napi-loader.mjs --target ${{ matrix.rust_target }}
 
+      # End-to-end gate: pack the publishable surface, install the consumer from
+      # local tarballs only, then run doctor/new/build. Cross-arch runners
+      # (e.g. darwin-x64 on an arm64 macOS runner) verify the closure only.
+      - name: Check packed npm closure
+        shell: bash
+        working-directory: doki-engine
+        env:
+          DOKI_HOST: ${{ matrix.host }}
+          DOKI_VERSION: ${{ needs.resolve-version.outputs.version }}
+        run: node scripts/check-packed-closure.mjs --host "$DOKI_HOST" --version "$DOKI_VERSION"
+
       - name: Upload platform binary
         uses: actions/upload-artifact@v4
         with:
