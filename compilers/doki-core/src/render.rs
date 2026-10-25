@@ -75,6 +75,10 @@ pub fn render_page(
         }
         map.insert("draft".into(), Value::Bool(node.front_matter.draft));
         map.insert("relPath".into(), Value::String(node.rel_path.clone()));
+        // Default layouts read `page.lang`; front matter may override per page.
+        if !map.contains_key("lang") {
+            map.insert("lang".into(), Value::String(config.lang.clone()));
+        }
     }
 
     let ctx = json!({
@@ -186,11 +190,29 @@ mod tests {
         let page = render_page(dir.path(), &cfg, None, &node).unwrap();
         assert!(page.html.contains("<title>Hello</title>"));
         assert!(
+            page.html.contains(r#"<html lang="en">"#),
+            "expected the site language to fill `page.lang`, got: {}",
+            page.html
+        );
+        assert!(
             page.html.contains("<h1>Heading</h1>"),
             "expected raw heading HTML via `|> safe`, got: {}",
             page.html
         );
         assert!(page.layout_id.starts_with("builtin:"));
+    }
+
+    #[test]
+    fn page_front_matter_lang_overrides_site_lang() {
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = ProjectConfig::default();
+        let node = node_from_md("fr.md", "---\nlang: fr\n---\n\nbonjour\n");
+        let page = render_page(dir.path(), &cfg, None, &node).unwrap();
+        assert!(
+            page.html.contains(r#"<html lang="fr">"#),
+            "expected front matter `lang` to win, got: {}",
+            page.html
+        );
     }
 
     #[test]
