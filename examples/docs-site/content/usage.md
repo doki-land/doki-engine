@@ -108,18 +108,18 @@ Layout templates define the overall structure of your pages. Here's an example `
 
 ```html
 <!DOCTYPE html>
-<html lang="{{ site.lang }}">
+<html lang="<% site.lang %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page.title }} - {{ site.title }}</title>
-    <meta name="description" content="{{ page.description or site.description }}">
+    <title><% page.title %> - <% site.title %></title>
+    <meta name="description" content="<% page.description || site.description %>">
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <header>
         <div class="container">
-            <h1><a href="/">{{ site.title }}</a></h1>
+            <h1><a href="/"><% site.title %></a></h1>
             <nav>
                 <ul>
                     <li><a href="/">Home</a></li>
@@ -130,7 +130,7 @@ Layout templates define the overall structure of your pages. Here's an example `
     </header>
     <main>
         <div class="container">
-            <% block content %><% endblock %>
+            <% block content %><% end block %>
         </div>
     </main>
     <footer>
@@ -151,12 +151,12 @@ Page templates extend layout templates and define the content area. Here's an ex
 
 <% block content %>
     <article>
-        <h1>{{ page.title }}</h1>
+        <h1><% page.title %></h1>
         <div class="content">
-            {{ page.content }}
+            <% content |> safe %>
         </div>
     </article>
-<% endblock %>
+<% end block %>
 ```
 
 ### Template Variables
@@ -311,21 +311,21 @@ themes/my-theme/
 Use the `paginate` function to paginate content:
 
 ```html
-<% for post in paginate("posts", 10) %>
+<% loop post in paginate("posts", 10) %>
     <article>
-        <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
-        <p>{{ post.excerpt }}</p>
+        <h2><a href="<% post.url %>"><% post.title %></a></h2>
+        <p><% post.excerpt %></p>
     </article>
-<% endfor %>
+<% end loop %>
 
 <div class="pagination">
     <% if paginator.has_prev %>
-        <a href="{{ paginator.prev_url }}">Previous</a>
-    <% endif %>
-    <span>{{ paginator.page }} / {{ paginator.total_pages }}</span>
+        <a href="<% paginator.prev_url %>">Previous</a>
+    <% end if %>
+    <span><% paginator.page %> / <% paginator.total_pages %></span>
     <% if paginator.has_next %>
-        <a href="{{ paginator.next_url }}">Next</a>
-    <% endif %>
+        <a href="<% paginator.next_url %>">Next</a>
+    <% end if %>
 </div>
 ```
 
@@ -336,22 +336,22 @@ Access categories and tags in your templates:
 ```html
 <h2>Categories</h2>
 <ul>
-    <% for category in categories %>
+    <% loop category in categories %>
         <li>
-            <a href="{{ category.url }}">{{ category.name }}</a>
+            <a href="<% category.url %>"><% category.name %></a>
             <span>(<% category.posts |> length %>)</span>
         </li>
-    <% endfor %>
+    <% end loop %>
 </ul>
 
 <h2>Tags</h2>
 <ul>
-    <% for tag in tags %>
+    <% loop tag in tags %>
         <li>
-            <a href="{{ tag.url }}">{{ tag.name }}</a>
+            <a href="<% tag.url %>"><% tag.name %></a>
             <span>(<% tag.posts |> length %>)</span>
         </li>
-    <% endfor %>
+    <% end loop %>
 </ul>
 ```
 

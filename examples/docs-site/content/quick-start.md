@@ -64,18 +64,18 @@ layout = "layout"
 
    ```html
    <!DOCTYPE html>
-   <html lang="{{ site.lang }}">
+   <html lang="<% site.lang %>">
    <head>
        <meta charset="UTF-8">
        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-       <title>{{ page.title }} - {{ site.title }}</title>
-       <meta name="description" content="{{ page.description or site.description }}">
+       <title><% page.title %> - <% site.title %></title>
+       <meta name="description" content="<% page.description || site.description %>">
        <link rel="stylesheet" href="/css/style.css">
    </head>
    <body>
        <header>
            <div class="container">
-               <h1><a href="/">{{ site.title }}</a></h1>
+               <h1><a href="/"><% site.title %></a></h1>
                <nav>
                    <ul>
                        <li><a href="/">Home</a></li>
@@ -86,7 +86,7 @@ layout = "layout"
        </header>
        <main>
            <div class="container">
-               <% block content %><% endblock %>
+               <% block content %><% end block %>
            </div>
        </main>
        <footer>
@@ -105,12 +105,12 @@ layout = "layout"
 
    <% block content %>
        <article>
-           <h1>{{ page.title }}</h1>
+           <h1><% page.title %></h1>
            <div class="content">
-               {{ page.content }}
+               <% content |> safe %>
            </div>
        </article>
-   <% endblock %>
+   <% end block %>
    ```
 
 3. **Create a page template** (`templates/page.html.dejavu`):
@@ -120,12 +120,12 @@ layout = "layout"
 
    <% block content %>
        <article>
-           <h1>{{ page.title }}</h1>
+           <h1><% page.title %></h1>
            <div class="content">
-               {{ page.content }}
+               <% content |> safe %>
            </div>
        </article>
-   <% endblock %>
+   <% end block %>
    ```
 
 ## Step 4: Create Content Files
