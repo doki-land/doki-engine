@@ -25,3 +25,5 @@ thiserror = "2"
 toml = "0.8"
 hex = "0.4"
 dejavu = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu" }
+notedown-formats = { path = "../../dxo 深度学习/notedown/projects/crates/notedown-formats", default-features = false }
+notedown-ir = { path = "../../dxo 深度学习/notedown/projects/crates/notedown-ir" }
