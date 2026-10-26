@@ -7,6 +7,8 @@
 use std::path::{Path, PathBuf};
 
 use dejavu::Dejavu;
+use notedown_formats::export::html::export_html;
+use notedown_formats::import::markdown::import_markdown_bytes;
 use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
 
@@ -105,6 +107,14 @@ pub fn render_page(
 }
 
 pub fn markdown_to_html(markdown: &str) -> String {
+    match import_markdown_bytes("inline", markdown) {
+        Ok(graph) => export_html(&graph).unwrap_or_else(|_| pulldown_fallback(markdown)),
+        Err(_) => pulldown_fallback(markdown),
+    }
+}
+
+/// Temporary fallback while Notedown lowering catches up on task lists and raw HTML.
+fn pulldown_fallback(markdown: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
