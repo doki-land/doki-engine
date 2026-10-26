@@ -293,7 +293,7 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
      * @returns 是否在代码块中
      */
     private isInCodeBlock(text: string): boolean {
-        return /\{%\s*$/.test(text) || /\{%\s+\w*\s*$/.test(text);
+        return /<%\s*$/.test(text) || /<%\s+\w*\s*$/.test(text);
     }
 
     /**
@@ -302,7 +302,7 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
      * @returns 是否在输出块中
      */
     private isInOutputBlock(text: string): boolean {
-        return /\{\{\s*$/.test(text) || /\{\{\s+.*\s*\|\s*$/.test(text);
+        return /<%=\s*$/.test(text) || /<%=\s+.*\s*\|\s*$/.test(text);
     }
 
     /**
@@ -313,11 +313,11 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
     private provideCodeBlockCompletions(
         text: string,
     ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        if (/\{%\s*$/.test(text)) {
+        if (/<%\s*$/.test(text)) {
             return this.createTagCompletions();
         }
 
-        const tagMatch = text.match(/\{%\s+(\w+)\s+$/);
+        const tagMatch = text.match(/<%\s+(\w+)\s+$/);
         if (tagMatch) {
             const tagName = tagMatch[1];
             if (this.isConditionTag(tagName)) {
@@ -347,7 +347,7 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
     private provideOutputBlockCompletions(
         text: string,
     ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        if (/\{\{\s*$/.test(text)) {
+        if (/<%=\s*$/.test(text)) {
             return this.createVariableCompletions();
         }
 
@@ -458,7 +458,7 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
     private tryGetCodeBlockSignature(
         text: string,
     ): vscode.SignatureHelp | undefined {
-        const tagMatch = text.match(/\{%\s+(\w+)\s+/);
+        const tagMatch = text.match(/<%\s+(\w+)\s+/);
         if (!tagMatch) {
             return undefined;
         }
@@ -512,7 +512,7 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
      * @returns 参数索引
      */
     private calculateActiveParameter(text: string, tagName: string): number {
-        const afterTag = text.replace(/^.*\{%\s+\w+\s+/, "");
+        const afterTag = text.replace(/^.*<%\s+\w+\s+/, "");
         const parts = afterTag.split(/\s+/).filter((p) => p.length > 0);
 
         if (tagName === "loop") {

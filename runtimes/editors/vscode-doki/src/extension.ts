@@ -118,24 +118,24 @@ export class ConfigManager {
         return {
             codeStart: config.get<string>(
                 "template.delimiters.codeStart",
-                "{%",
+                "<%",
             ),
-            codeEnd: config.get<string>("template.delimiters.codeEnd", "%}"),
+            codeEnd: config.get<string>("template.delimiters.codeEnd", "%>"),
             outputStart: config.get<string>(
                 "template.delimiters.outputStart",
-                "{{",
+                "<%=",
             ),
             outputEnd: config.get<string>(
                 "template.delimiters.outputEnd",
-                "}}",
+                "%>",
             ),
             commentStart: config.get<string>(
                 "template.delimiters.commentStart",
-                "{#",
+                "<%#",
             ),
             commentEnd: config.get<string>(
                 "template.delimiters.commentEnd",
-                "#}",
+                "%>",
             ),
         };
     }
@@ -159,7 +159,7 @@ export class ConfigManager {
      */
     public static getCodeStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.codeStart", "{%");
+        return config.get<string>("template.delimiters.codeStart", "<%");
     }
 
     /**
@@ -168,7 +168,7 @@ export class ConfigManager {
      */
     public static getCodeEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.codeEnd", "%}");
+        return config.get<string>("template.delimiters.codeEnd", "%>");
     }
 
     /**
@@ -177,7 +177,7 @@ export class ConfigManager {
      */
     public static getOutputStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.outputStart", "{{");
+        return config.get<string>("template.delimiters.outputStart", "<%=");
     }
 
     /**
@@ -186,7 +186,7 @@ export class ConfigManager {
      */
     public static getOutputEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.outputEnd", "}}");
+        return config.get<string>("template.delimiters.outputEnd", "%>");
     }
 
     /**
@@ -195,7 +195,7 @@ export class ConfigManager {
      */
     public static getCommentStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentStart", "{#");
+        return config.get<string>("template.delimiters.commentStart", "<%#");
     }
 
     /**
@@ -204,7 +204,7 @@ export class ConfigManager {
      */
     public static getCommentEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentEnd", "#}");
+        return config.get<string>("template.delimiters.commentEnd", "%>");
     }
 
     /**

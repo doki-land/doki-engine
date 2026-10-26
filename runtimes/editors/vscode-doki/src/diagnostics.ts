@@ -591,7 +591,7 @@ export class DiagnosticsProvider {
         const diagnostics: vscode.Diagnostic[] = [];
         const lines = content.split("\n");
 
-        const outputPattern = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*/g;
+        const outputPattern = /<%=\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*/g;
         const definedVars = new Set<string>();
 
         for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -817,22 +817,22 @@ export class DiagnosticsProvider {
 
         const codeStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("codeStart", "{%");
+            .get<string>("codeStart", "<%");
         const codeEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("codeEnd", "%}");
+            .get<string>("codeEnd", "%>");
         const outputStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("outputStart", "{{");
+            .get<string>("outputStart", "<%=");
         const outputEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("outputEnd", "}}");
+            .get<string>("outputEnd", "%>");
         const commentStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentStart", "{#");
+            .get<string>("commentStart", "<%#");
         const commentEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentEnd", "#}");
+            .get<string>("commentEnd", "%>");
 
         const delimiterPairs: Array<{
             start: string;
@@ -1123,10 +1123,10 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
         switch (code) {
             case DiagnosticCode.UNCLOSED_TAG: {
                 if (fixTitle === "添加结束标签") {
-                    const tagMatch = lineText.match(/\{%\s*(\w+)/);
+                    const tagMatch = lineText.match(/<%\s*(\w+)/);
                     if (tagMatch) {
                         const tagName = tagMatch[1];
-                        const endTag = `{% end${tagName} %}`;
+                        const endTag = `<% end${tagName} %>`;
                         const insertPos = new vscode.Position(
                             range.start.line,
                             lineText.length,
@@ -1159,7 +1159,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
                     const varMatch = diagnostic.message.match(/变量:\s*(\w+)/);
                     if (varMatch) {
                         const varName = varMatch[1];
-                        const insertText = `{% let ${varName} =  %}`;
+                        const insertText = `<% let ${varName} =  %>`;
                         const lineStart = new vscode.Position(
                             range.start.line,
                             0,
@@ -1175,7 +1175,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
                     const funcMatch = diagnostic.message.match(/函数:\s*(\w+)/);
                     if (funcMatch) {
                         const funcName = funcMatch[1];
-                        const insertText = `{% micro ${funcName}() %}\n{% endmicro %}`;
+                        const insertText = `<% micro ${funcName}() %>\n<% endmicro %>`;
                         const lineStart = new vscode.Position(
                             range.start.line,
                             0,
@@ -1189,11 +1189,11 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
             case DiagnosticCode.MISSING_END: {
                 if (fixTitle === "添加结束语句") {
                     const blockMatch = lineText.match(
-                        /\{%\s*(if|for|while|micro|block)/,
+                        /<%\s*(if|for|while|micro|block)/,
                     );
                     if (blockMatch) {
                         const blockType = blockMatch[1];
-                        const endStatement = `{% end${blockType} %}`;
+                        const endStatement = `<% end${blockType} %>`;
                         const insertPos = new vscode.Position(
                             range.start.line,
                             lineText.length,
@@ -1212,7 +1212,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
                 if (fixTitle === "添加缺失的定界符") {
                     const codeEndDelim = vscode.workspace
                         .getConfiguration("doki.template.delimiters")
-                        .get<string>("codeEnd", "%}");
+                        .get<string>("codeEnd", "%>");
                     const insertPos = new vscode.Position(
                         range.start.line,
                         lineText.length,
