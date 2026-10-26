@@ -206,12 +206,12 @@
                 },
                 "doki.template.delimiters.commentStart": {
                     "type": "string",
-                    "default": "<%#",
+                    "default": "<#",
                     "description": "注释块开始定界符"
                 },
                 "doki.template.delimiters.commentEnd": {
                     "type": "string",
-                    "default": "%>",
+                    "default": "#>",
                     "description": "注释块结束定界符"
                 },
                 "doki.build.outputDir": {

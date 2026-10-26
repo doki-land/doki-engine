@@ -44,7 +44,7 @@ suite("Extension Test Suite", () => {
 
     test("Language configuration should support comments", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: "<%# comment %>",
+            content: "<# comment #>",
             language: "doki",
         });
         assert.ok(doc);

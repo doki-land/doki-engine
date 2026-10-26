@@ -829,10 +829,10 @@ export class DiagnosticsProvider {
             .get<string>("outputEnd", "%>");
         const commentStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentStart", "<%#");
+            .get<string>("commentStart", "<#");
         const commentEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentEnd", "%>");
+            .get<string>("commentEnd", "#>");
 
         const delimiterPairs: Array<{
             start: string;

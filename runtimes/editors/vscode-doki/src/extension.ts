@@ -131,11 +131,11 @@ export class ConfigManager {
             ),
             commentStart: config.get<string>(
                 "template.delimiters.commentStart",
-                "<%#",
+                "<#",
             ),
             commentEnd: config.get<string>(
                 "template.delimiters.commentEnd",
-                "%>",
+                "#>",
             ),
         };
     }
@@ -195,7 +195,7 @@ export class ConfigManager {
      */
     public static getCommentStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentStart", "<%#");
+        return config.get<string>("template.delimiters.commentStart", "<#");
     }
 
     /**
@@ -204,7 +204,7 @@ export class ConfigManager {
      */
     public static getCommentEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentEnd", "%>");
+        return config.get<string>("template.delimiters.commentEnd", "#>");
     }
 
     /**
