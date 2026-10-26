@@ -12,14 +12,14 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should provide code completion for variables", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{{ n",
+      content: "<% let name = \"test\" %>\n<%= n",
       language: "doki",
     });
     
     await vscode.window.showTextDocument(doc);
     
     // 触发代码完成
-    const position = new vscode.Position(1, 3);
+    const position = new vscode.Position(1, 4);
     const completions = await vscode.commands.executeCommand<vscode.CompletionList>(
       "vscode.executeCompletionItemProvider",
       doc.uri,
@@ -36,14 +36,14 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should provide code completion for built-in functions", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{{ le",
+      content: "<%= le",
       language: "doki",
     });
     
     await vscode.window.showTextDocument(doc);
     
     // 触发代码完成
-    const position = new vscode.Position(0, 3);
+    const position = new vscode.Position(0, 4);
     const completions = await vscode.commands.executeCommand<vscode.CompletionList>(
       "vscode.executeCompletionItemProvider",
       doc.uri,
@@ -60,7 +60,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should provide diagnostics for syntax errors", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% if true %}\n  {{ missing closing",
+      content: "<% if true %>\n  <%= missing closing",
       language: "doki",
     });
     
@@ -75,14 +75,14 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should provide hover information for variables", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{{ name }}",
+      content: "<% let name = \"test\" %>\n<%= name %>",
       language: "doki",
     });
     
     await vscode.window.showTextDocument(doc);
     
     // 触发悬停
-    const position = new vscode.Position(1, 3);
+    const position = new vscode.Position(1, 4);
     const hover = await vscode.commands.executeCommand<vscode.Hover>(
       "vscode.executeHoverProvider",
       doc.uri,
@@ -95,7 +95,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should format document", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% if true %}{{ test }}{% end if %}",
+      content: "<% if true %><%= test %><% end if %>",
       language: "doki",
     });
     
@@ -113,7 +113,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should support document symbols", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{% micro hello() %}\n  {{ name }}\n{% end micro %}",
+      content: "<% let name = \"test\" %>\n<% micro hello() %>\n  <%= name %>\n<% end micro %>",
       language: "doki",
     });
     
@@ -131,14 +131,14 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should support go to definition", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{{ name }}",
+      content: "<% let name = \"test\" %>\n<%= name %>",
       language: "doki",
     });
     
     await vscode.window.showTextDocument(doc);
     
     // 触发转到定义
-    const position = new vscode.Position(1, 3);
+    const position = new vscode.Position(1, 4);
     const definitions = await vscode.commands.executeCommand<vscode.Location[]>(
       "vscode.executeDefinitionProvider",
       doc.uri,
@@ -151,7 +151,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should support find references", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{{ name }}\n{{ name }}",
+      content: "<% let name = \"test\" %>\n<%= name %>\n<%= name %>",
       language: "doki",
     });
     
@@ -171,7 +171,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should support rename", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let name = \"test\" %}\n{{ name }}",
+      content: "<% let name = \"test\" %>\n<%= name %>",
       language: "doki",
     });
     
@@ -190,7 +190,7 @@ suite("LSP Integration Test Suite", () => {
 
   test("Should provide code actions", async () => {
     const doc = await vscode.workspace.openTextDocument({
-      content: "{% let x = 1 %}\n{% if x %}\n  {{ x }}\n{% end if %}",
+      content: "<% let x = 1 %>\n<% if x %>\n  <%= x %>\n<% end if %>",
       language: "doki",
     });
     

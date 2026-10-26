@@ -23,7 +23,7 @@ suite("Extension Test Suite", () => {
 
     test("Doki language should be registered", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: "{% let x = 1 %}",
+            content: "<% let x = 1 %>",
             language: "doki",
         });
         assert.strictEqual(doc.languageId, "doki");
@@ -44,7 +44,7 @@ suite("Extension Test Suite", () => {
 
     test("Language configuration should support comments", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: "{# comment #}",
+            content: "<%# comment %>",
             language: "doki",
         });
         assert.ok(doc);
@@ -52,7 +52,7 @@ suite("Extension Test Suite", () => {
 
     test("Language configuration should support brackets", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: "{% if true %}{% end if %}",
+            content: "<% if true %><% end if %>",
             language: "doki",
         });
         assert.ok(doc);
@@ -62,18 +62,18 @@ suite("Extension Test Suite", () => {
 suite("Doki Template Syntax Tests", () => {
     test("Should parse variable declaration", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: '{% let name = "world" %}',
+            content: '<% let name = "world" %>',
             language: "doki",
         });
         assert.ok(doc);
-        assert.strictEqual(doc.getText(), '{% let name = "world" %}');
+        assert.strictEqual(doc.getText(), '<% let name = "world" %>');
     });
 
     test("Should parse if statement", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% if true %}
+            content: `<% if true %>
   Yes
-{% end if %}`,
+<% end if %>`,
             language: "doki",
         });
         assert.ok(doc);
@@ -81,11 +81,11 @@ suite("Doki Template Syntax Tests", () => {
 
     test("Should parse if-else statement", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% if false %}
+            content: `<% if false %>
   No
-{% else %}
+<% else %>
   Yes
-{% end if %}`,
+<% end if %>`,
             language: "doki",
         });
         assert.ok(doc);
@@ -93,9 +93,9 @@ suite("Doki Template Syntax Tests", () => {
 
     test("Should parse loop statement", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% loop i in 0..10 %}
-  {{ i }}
-{% end loop %}`,
+            content: `<% loop i in 0..10 %>
+  <%= i %>
+<% end loop %>`,
             language: "doki",
         });
         assert.ok(doc);
@@ -103,9 +103,9 @@ suite("Doki Template Syntax Tests", () => {
 
     test("Should parse micro function", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% micro greet(name) %}
-  Hello, {{ name }}!
-{% end micro %}`,
+            content: `<% micro greet(name) %>
+  Hello, <%= name %>!
+<% end micro %>`,
             language: "doki",
         });
         assert.ok(doc);
@@ -113,10 +113,10 @@ suite("Doki Template Syntax Tests", () => {
 
     test("Should parse match statement", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% match color %}
-  {% case "red" %} Red
-  {% case _ %} Other
-{% end match %}`,
+            content: `<% match color %>
+  <% case "red" %> Red
+  <% case _ %> Other
+<% end match %>`,
             language: "doki",
         });
         assert.ok(doc);
@@ -124,11 +124,11 @@ suite("Doki Template Syntax Tests", () => {
 
     test("Should parse nested structures", async () => {
         const doc = await vscode.workspace.openTextDocument({
-            content: `{% if true %}
-  {% loop i in 0..3 %}
-    {{ i }}
-  {% end loop %}
-{% end if %}`,
+            content: `<% if true %>
+  <% loop i in 0..3 %>
+    <%= i %>
+  <% end loop %>
+<% end if %>`,
             language: "doki",
         });
         assert.ok(doc);
