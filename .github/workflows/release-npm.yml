@@ -122,7 +122,9 @@ jobs:
         if: ${{ !matrix.container }}
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust_target }}
+          # macOS arm64 runners host both darwin-arm64 and darwin-x64 builds
+          # so install the two targets together like dejavu-language does.
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.rust_target }}
 
       - name: Install napi workspace deps
         working-directory: doki-engine/compilers/doki-node

@@ -259,11 +259,15 @@ async function main() {
     const installArgs = [
       'install',
       ...packed,
-      '--omit=optional',
       '--no-audit',
       '--no-fund',
       '--no-update-notifier',
     ]
+    // Note: do NOT pass `--omit=optional` here. The platform package
+    // (@doki-land/doki-<host>) is declared as an optional dependency of
+    // @doki-land/doki, so omitting optionals would skip it and then
+    // `doki doctor` fails with "Cannot find native binding".
+    // See npm/cli#4828.
     if (!fullMode) {
       console.log(
         `notice: ${args.host} cannot run on this node (${process.platform}/${process.arch}); ` +
