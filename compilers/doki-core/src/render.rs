@@ -153,8 +153,8 @@ pub fn render_page(
 /// Convert Markdown source to HTML via Notedown import + export pipeline.
 ///
 /// Import or export failures are surfaced as structured [`CoreError`] variants
-/// (`MarkdownImport` / `MarkdownExport`) instead of being silently swallowed by a
-/// pulldown-cmark fallback.  The caller decides how to present the diagnostic.
+/// (`MarkdownImport` / `MarkdownExport`).  Errors are not silently swallowed; the
+/// caller decides how to present the diagnostic.
 ///
 /// Known upstream gaps tracked against Notedown revision `3c01bea`:
 /// `Inline::Citation` and other semantic-only inline nodes still yield
