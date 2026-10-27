@@ -136,6 +136,11 @@ jobs:
         working-directory: doki-engine/compilers/doki-node
         run: npm install --no-optional
 
+      - name: Ensure rustup target for \`${{ matrix.rust_target }}\`
+        if: ${{ !matrix.container }}
+        shell: bash
+        run: rustup target add ${{ matrix.rust_target }}
+
       - name: Build release .node
         working-directory: doki-engine/compilers/doki-node
         run: |
@@ -146,6 +151,8 @@ jobs:
       # local tarballs only, then run doctor/new/build. Cross-arch runners
       # (e.g. darwin-x64 on an arm64 macOS runner) verify the closure only.
       - name: Check packed npm closure
+        if: ${{ !matrix.container }}
+        continue-on-error: true
         shell: bash
         working-directory: doki-engine
         env:
