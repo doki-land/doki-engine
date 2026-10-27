@@ -257,16 +257,15 @@ async function main() {
 
     const fullMode = runtimeMatchesHost(plat)
     const platDirName = plat.name.replace(/^@[\w-]+\//, '')
+    // Mirror dejavu: --save-exact keeps the local-tarball hoisting stable so
+    // npm filters optional deps by `os`/`cpu` and installs the matching
+    // platform package. npm/cli#4828 is avoided by running on a recent npm.
     const installArgs = [
       'install',
       ...packed,
       '--no-audit',
       '--no-fund',
-      '--no-update-notifier',
-      // npm/cli#4828: optional deps (the platform package) are silently skipped
-      // in some npm versions when installing from local tarballs. `--force`
-      // bypasses the broken hoisting / dedup logic that drops them.
-      '--force',
+      '--save-exact',
     ]
     if (!fullMode) {
       console.log(
@@ -275,19 +274,6 @@ async function main() {
       )
     }
     runOk('npm', installArgs, { cwd: consumer })
-
-    // npm/cli#4828 不够时的兜底：如果 --force 后 platform 包仍未出现，
-    // 清锁重装一次（npm 自己也提示过 "try npm i again"）。
-    const postInstallDokiLand = readdirSync(path.join(consumer, 'node_modules', '@doki-land')).sort()
-    if (!postInstallDokiLand.includes(platDirName)) {
-      console.log(
-        `optional dep still missing (got ${postInstallDokiLand.join(', ')}); ` +
-          'clearing node_modules + lock and retrying npm install --force',
-      )
-      rmSync(path.join(consumer, 'node_modules'), { recursive: true, force: true })
-      rmSync(path.join(consumer, 'package-lock.json'), { force: true })
-      runOk('npm', installArgs, { cwd: consumer })
-    }
 
     const installedRoot = path.join(consumer, 'node_modules')
     const installedDoki = readJson(path.join(installedRoot, '@doki-land/doki/package.json'))
