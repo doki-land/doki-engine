@@ -1,15 +1,19 @@
 //! Page render: Markdown → HTML, then Dejavu **public** facade for layouts.
 //!
 //! Depends only on the `dejavu` crate (not dejavu-language / dejavu-ir / dejavu-engine).
-//! Layouts use the Dejavu default language (`<% %>` code, `<# #>` comments), so Doki does
-//! not carry a private delimiter config that could drift from the upstream default.
+//! Layout delimiters are chosen by file extension:
+//!
+//! - `.doki` / `.dj` → `{% ... %}` code, `{# ... #}` comments
+//! - `.dejavu` / `.dj` / `.html` (legacy) → default `<% ... %>` code, `<# ... #>` comments
+//!
+//! Dejavu IR has **no** `output_start` / `output_end` — a single slot is classified as
+//! statement or expression by keyword.  There is no `{{ expr }}` or `<%= expr %>`.
 
 use std::path::{Path, PathBuf};
 
-use dejavu::Dejavu;
+use dejavu::{Dejavu, Language, TemplateConfig};
 use notedown_formats::export::html::export_html;
 use notedown_formats::import::markdown::import_markdown_bytes;
-use pulldown_cmark::{html, Options, Parser};
 use serde_json::{json, Value};
 
 use crate::config::{ExtensionRef, ProjectConfig};
@@ -34,6 +38,42 @@ pub const DEFAULT_LAYOUT: &str = r#"<!DOCTYPE html>
 </html>
 "#;
 
+/// Default Dejavu T1 language config (`<% %>` code, `<# #>` comments).
+fn default_dejavu_language() -> Language {
+    Language {
+        syntax_mode: "template".into(),
+        template: TemplateConfig {
+            code_start: "<%".into(),
+            code_end: "%>".into(),
+            comment_start: "<#".into(),
+            comment_end: "#>".into(),
+            support_filter_pipe: true,
+            legacy_for: false,
+        },
+    }
+}
+
+/// Resolve a [`Language`] config from a layout file extension.
+///
+/// - `"doki"` / `"dj"` → Doki-native `{% %}` code, `{# #}` comments, filter pipe on.
+/// - everything else (including `"dejavu"`, `"html"`, `None`) → Dejavu default `<% %>`.
+pub fn language_for_ext(ext: Option<&str>) -> Language {
+    match ext {
+        Some("doki") | Some("dj") => Language {
+            syntax_mode: "template".into(),
+            template: TemplateConfig {
+                code_start: "{%".into(),
+                code_end: "%}".into(),
+                comment_start: "{#".into(),
+                comment_end: "#}".into(),
+                support_filter_pipe: true,
+                legacy_for: false,
+            },
+        },
+        _ => default_dejavu_language(),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RenderedPage {
     pub html: String,
@@ -45,19 +85,22 @@ pub struct RenderedPage {
 ///
 /// `theme_root` is the absolute theme directory after Node resolution (`path` or package root).
 /// When `None`, falls back to `config.theme.path` relative to `project_root`, else builtin.
+///
+/// Language config is selected from the layout file's extension via [`language_for_ext`],
+/// so `.doki` and `.dejavu` themes can ship side-by-side with their native delimiters.
 pub fn render_page(
     project_root: &Path,
     config: &ProjectConfig,
     theme_root: Option<&Path>,
     node: &ContentNode,
 ) -> CoreResult<RenderedPage> {
-    let content_html = markdown_to_html(&node.body);
+    let content_html = markdown_to_html(&node.body)?;
     let layout_name = node
         .front_matter
         .layout
         .as_deref()
         .unwrap_or("layout");
-    let (layout_source, layout_id) =
+    let (layout_source, layout_id, layout_ext) =
         resolve_layout(project_root, config.theme.as_ref(), theme_root, layout_name)?;
 
     let title = node
@@ -96,7 +139,8 @@ pub fn render_page(
         "content": content_html,
     });
 
-    let html = Dejavu::render_source(&layout_source, &ctx).map_err(|e| {
+    let language = language_for_ext(layout_ext.as_deref());
+    let html = Dejavu::render_source_with(&layout_source, &ctx, &language).map_err(|e| {
         CoreError::build(format!(
             "doki render failed for `{}` (layout {layout_id}): {e}",
             node.rel_path
@@ -106,23 +150,15 @@ pub fn render_page(
     Ok(RenderedPage { html, layout_id })
 }
 
-pub fn markdown_to_html(markdown: &str) -> String {
-    match import_markdown_bytes("inline", markdown) {
-        Ok(graph) => export_html(&graph).unwrap_or_else(|_| pulldown_fallback(markdown)),
-        Err(_) => pulldown_fallback(markdown),
-    }
-}
-
-/// Temporary fallback while Notedown lowering catches up on task lists and raw HTML.
-fn pulldown_fallback(markdown: &str) -> String {
-    let mut options = Options::empty();
-    options.insert(Options::ENABLE_TABLES);
-    options.insert(Options::ENABLE_STRIKETHROUGH);
-    options.insert(Options::ENABLE_TASKLISTS);
-    let parser = Parser::new_ext(markdown, options);
-    let mut out = String::new();
-    html::push_html(&mut out, parser);
-    out
+/// Convert Markdown source to HTML via Notedown import + export pipeline.
+///
+/// Import or export failures are surfaced as structured [`CoreError`] variants
+/// (`MarkdownImport` / `MarkdownExport`) instead of being silently swallowed by a
+/// pulldown-cmark fallback.  The caller decides how to present the diagnostic.
+pub fn markdown_to_html(markdown: &str) -> CoreResult<String> {
+    let graph = import_markdown_bytes("inline", markdown)
+        .map_err(|source| CoreError::MarkdownImport { source })?;
+    export_html(&graph).map_err(|source| CoreError::MarkdownExport { source })
 }
 
 fn resolve_layout(
@@ -130,7 +166,7 @@ fn resolve_layout(
     theme: Option<&ExtensionRef>,
     theme_root: Option<&Path>,
     layout_name: &str,
-) -> CoreResult<(String, String)> {
+) -> CoreResult<(String, String, Option<String>)> {
     let resolved_root = theme_root
         .map(|p| p.to_path_buf())
         .or_else(|| {
@@ -149,19 +185,25 @@ fn resolve_layout(
                     .unwrap_or(&candidate)
                     .to_string_lossy()
                     .replace('\\', "/");
-                return Ok((source, rel));
+                let ext = candidate
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string());
+                return Ok((source, rel, ext));
             }
         }
     }
-    Ok((DEFAULT_LAYOUT.to_string(), format!("builtin:{layout_name}")))
+    Ok((DEFAULT_LAYOUT.to_string(), format!("builtin:{layout_name}"), None))
 }
 
 fn layout_candidates(theme_root: &Path, layout_name: &str) -> Vec<PathBuf> {
     let layouts = theme_root.join("layouts");
     vec![
+        layouts.join(format!("{layout_name}.doki")),
         layouts.join(format!("{layout_name}.dejavu")),
         layouts.join(format!("{layout_name}.dj")),
         layouts.join(format!("{layout_name}.html")),
+        theme_root.join(format!("layouts/{layout_name}.doki")),
         theme_root.join(format!("layouts/{layout_name}.dejavu")),
     ]
 }
