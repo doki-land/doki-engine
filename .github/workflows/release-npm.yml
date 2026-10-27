@@ -136,15 +136,17 @@ jobs:
         working-directory: doki-engine/compilers/doki-node
         run: npm install --no-optional
 
-      - name: Ensure rustup target for \`${{ matrix.rust_target }}\`
-        if: ${{ !matrix.container }}
+      - name: Build release .node (cargo first, then napi packages loader)
         shell: bash
-        run: rustup target add ${{ matrix.rust_target }}
-
-      - name: Build release .node
         working-directory: doki-engine/compilers/doki-node
         run: |
-          npx napi build --platform --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml --package doki-node --output-dir .
+          set -euo pipefail
+          rustup target add ${{ matrix.rust_target }}
+          # cargo build directly so rustup-installed targets are respected —
+          # bypasses napi CLI's toolchain management that sometimes misses
+          # cross-compile targets on macOS arm64 runners.
+          cargo build --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml -p doki-node
+          npx napi build --platform --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml --package doki-node --output-dir . --no-build
           node ../../scripts/patch-napi-loader.mjs --target ${{ matrix.rust_target }}
 
       # End-to-end gate: pack the publishable surface, install the consumer from
@@ -152,7 +154,6 @@ jobs:
       # (e.g. darwin-x64 on an arm64 macOS runner) verify the closure only.
       - name: Check packed npm closure
         if: ${{ !matrix.container }}
-        continue-on-error: true
         shell: bash
         working-directory: doki-engine
         env:
