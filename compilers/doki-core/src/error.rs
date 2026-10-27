@@ -1,4 +1,5 @@
 use miette::Diagnostic;
+use notedown_formats::FormatError;
 use thiserror::Error;
 
 pub type ConfigResult<T> = Result<T, ConfigError>;
@@ -53,6 +54,20 @@ pub enum CoreError {
     #[error("{message}")]
     #[diagnostic(code(doki::build::invalid))]
     Build { message: String },
+
+    #[error("markdown import failed")]
+    #[diagnostic(code(doki::markdown::import))]
+    MarkdownImport {
+        #[source]
+        source: FormatError,
+    },
+
+    #[error("markdown export failed")]
+    #[diagnostic(code(doki::markdown::export))]
+    MarkdownExport {
+        #[source]
+        source: FormatError,
+    },
 }
 
 impl CoreError {
