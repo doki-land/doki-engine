@@ -155,6 +155,11 @@ pub fn render_page(
 /// Import or export failures are surfaced as structured [`CoreError`] variants
 /// (`MarkdownImport` / `MarkdownExport`) instead of being silently swallowed by a
 /// pulldown-cmark fallback.  The caller decides how to present the diagnostic.
+///
+/// Known upstream gaps tracked against Notedown revision `3c01bea`:
+/// `Inline::Citation` and other semantic-only inline nodes still yield
+/// `FormatError::Unsupported` from the conservative HTML exporter.  Task lists
+/// and raw HTML (both block and inline) are wired since `6e899dd`.
 pub fn markdown_to_html(markdown: &str) -> CoreResult<String> {
     let graph = import_markdown_bytes("inline", markdown)
         .map_err(|source| CoreError::MarkdownImport { source })?;
