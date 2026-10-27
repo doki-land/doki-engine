@@ -256,26 +256,38 @@ async function main() {
     )
 
     const fullMode = runtimeMatchesHost(plat)
+    const platDirName = plat.name.replace(/^@[\w-]+\//, '')
     const installArgs = [
       'install',
       ...packed,
       '--no-audit',
       '--no-fund',
       '--no-update-notifier',
+      // npm/cli#4828: optional deps (the platform package) are silently skipped
+      // in some npm versions when installing from local tarballs. `--force`
+      // bypasses the broken hoisting / dedup logic that drops them.
+      '--force',
     ]
-    // Note: do NOT pass `--omit=optional` here. The platform package
-    // (@doki-land/doki-<host>) is declared as an optional dependency of
-    // @doki-land/doki, so omitting optionals would skip it and then
-    // `doki doctor` fails with "Cannot find native binding".
-    // See npm/cli#4828.
     if (!fullMode) {
       console.log(
         `notice: ${args.host} cannot run on this node (${process.platform}/${process.arch}); ` +
           'verifying the packed closure only',
       )
-      installArgs.push('--force')
     }
     runOk('npm', installArgs, { cwd: consumer })
+
+    // npm/cli#4828 不够时的兜底：如果 --force 后 platform 包仍未出现，
+    // 清锁重装一次（npm 自己也提示过 "try npm i again"）。
+    const postInstallDokiLand = readdirSync(path.join(consumer, 'node_modules', '@doki-land')).sort()
+    if (!postInstallDokiLand.includes(platDirName)) {
+      console.log(
+        `optional dep still missing (got ${postInstallDokiLand.join(', ')}); ` +
+          'clearing node_modules + lock and retrying npm install --force',
+      )
+      rmSync(path.join(consumer, 'node_modules'), { recursive: true, force: true })
+      rmSync(path.join(consumer, 'package-lock.json'), { force: true })
+      runOk('npm', installArgs, { cwd: consumer })
+    }
 
     const installedRoot = path.join(consumer, 'node_modules')
     const installedDoki = readJson(path.join(installedRoot, '@doki-land/doki/package.json'))
@@ -307,7 +319,6 @@ async function main() {
     )
 
     const dokiLandEntries = readdirSync(path.join(installedRoot, '@doki-land')).sort()
-    const platDirName = plat.name.replace(/^@[\w-]+\//, '')
     const expectedEntries = ['doki', 'doki-plugin', 'doki-theme', platDirName].sort()
     assert(
       JSON.stringify(dokiLandEntries) === JSON.stringify(expectedEntries),

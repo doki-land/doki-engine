@@ -123,8 +123,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           # macOS arm64 runners host both darwin-arm64 and darwin-x64 builds
-          # so install the two targets together like dejavu-language does.
-          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.rust_target }}
+          # so install both targets together (space-separated per dtolnay docs).
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin x86_64-apple-darwin' || matrix.rust_target }}
+
+      - name: Ensure cross-compile target (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Install napi workspace deps
         working-directory: doki-engine/compilers/doki-node
