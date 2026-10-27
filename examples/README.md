@@ -6,6 +6,6 @@ Sample sites under this folder are **historical / uneven**. Prefer scaffolding f
 doki new my-site
 ```
 
-Templates use **Dejavu** defaults (`<% %>` / `|>`), not Liquid `{{ }}` / `{% %}` and not a shortcode subsystem.
+Templates pick delimiters by file extension: `.doki` / `.dj` → `{% %}`; `.dejavu` → `<% %>`. No independent output slot (`{{ expr }}` or `<%= expr %>`).
 
 Product docs: `documentation/guide/index.md`.

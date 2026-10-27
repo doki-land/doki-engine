@@ -73,7 +73,7 @@ draft: false
 </html>
 ```
 
-**不要**写 Liquid 风格的 `{{ }}` / `{% %}`——那不是当前 Dejavu 默认定界符，也不是 Doki 文档承诺。
+**不要**写 Liquid 风格的独立输出定界符 `{{ expr }}`（Dejavu 不存在独立 output slot）。code block 定界符按扩展名区分：`.doki` / `.dj` 用 `{% %}`，`.dejavu` 用 `<% %>`。
 
 ## 插件
 
