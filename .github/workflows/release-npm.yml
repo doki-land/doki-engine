@@ -146,7 +146,7 @@ jobs:
           # bypasses napi CLI's toolchain management that sometimes misses
           # cross-compile targets on macOS arm64 runners.
           cargo build --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml -p doki-node
-          npx napi build --platform --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml --package doki-node --output-dir . --no-build
+          npx napi build --platform --release --target ${{ matrix.rust_target }} --manifest-path ../../Cargo.toml --package doki-node --output-dir .
           node ../../scripts/patch-napi-loader.mjs --target ${{ matrix.rust_target }}
 
       # End-to-end gate: pack the publishable surface, install the consumer from
