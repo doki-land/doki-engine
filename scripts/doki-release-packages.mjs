@@ -96,16 +96,26 @@ export const PLATFORM_PACKAGES = [
   },
 ]
 
-/** napi-generated require() names → our published package names */
+/**
+ * napi-generated require() names → our published package names.
+ *
+ * napi uses `napi.packageName` from package.json (`@doki-land/doki`) plus the
+ * Rust `host` suffix. We strip both `-msvc` on Windows and `-gnu` on Linux so
+ * the loader matches the flat platform names in PLATFORM_PACKAGES.
+ */
 export const NAPI_REQUIRE_REWRITES = [
+  // Windows: drop `-msvc` (napi host → our published name)
   ['@doki-land/doki-win32-x64-msvc', '@doki-land/doki-win32-x64'],
   ['@doki-land/doki-win32-arm64-msvc', '@doki-land/doki-win32-arm64'],
-  ['@doki-land/doki-core-win32-x64-msvc', '@doki-land/doki-win32-x64'],
-  ['@doki-land/doki-core-win32-arm64-msvc', '@doki-land/doki-win32-arm64'],
-  ['@doki-land/doki-core-darwin-x64', '@doki-land/doki-darwin-x64'],
-  ['@doki-land/doki-core-darwin-arm64', '@doki-land/doki-darwin-arm64'],
-  ['@doki-land/doki-core-linux-x64-gnu', '@doki-land/doki-linux-x64'],
-  ['@doki-land/doki-core-linux-arm64-gnu', '@doki-land/doki-linux-arm64'],
+  // Linux: drop `-gnu` (napi host → our published name)
+  ['@doki-land/doki-linux-x64-gnu', '@doki-land/doki-linux-x64'],
+  ['@doki-land/doki-linux-arm64-gnu', '@doki-land/doki-linux-arm64'],
+  // musl hosts also get `-musl` stripped (we publish neither gnu nor musl with
+  // the libc suffix; musl loader branches resolve to the gnu-named package in
+  // practice because our PLATFORM_PACKAGES only ship gnu targets — but keep the
+  // rewrite symmetric in case a musl host ever runs)
+  ['@doki-land/doki-linux-x64-musl', '@doki-land/doki-linux-x64'],
+  ['@doki-land/doki-linux-arm64-musl', '@doki-land/doki-linux-arm64'],
 ]
 
 export function optionalDepsMap(version = SMOKE_VERSION) {
