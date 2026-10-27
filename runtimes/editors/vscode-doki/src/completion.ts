@@ -280,29 +280,16 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
             return this.provideCodeBlockCompletions(textBeforeCursor);
         }
 
-        if (this.isInOutputBlock(textBeforeCursor)) {
-            return this.provideOutputBlockCompletions(textBeforeCursor);
-        }
-
         return undefined;
     }
 
     /**
-     * 判断是否在代码块中
+     * 判断是否在代码块中 同时支持 doki 的 \`{%\` 和 dejavu 的 \`<%\`
      * @param text 光标前的文本
      * @returns 是否在代码块中
      */
     private isInCodeBlock(text: string): boolean {
-        return /<%\s*$/.test(text) || /<%\s+\w*\s*$/.test(text);
-    }
-
-    /**
-     * 判断是否在输出块中
-     * @param text 光标前的文本
-     * @returns 是否在输出块中
-     */
-    private isInOutputBlock(text: string): boolean {
-        return /<%=\s*$/.test(text) || /<%=\s+.*\s*\|\s*$/.test(text);
+        return /[<{]%\s*$/.test(text) || /[<{]%\s+\w*\s*$/.test(text);
     }
 
     /**
@@ -313,11 +300,11 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
     private provideCodeBlockCompletions(
         text: string,
     ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        if (/<%\s*$/.test(text)) {
+        if (/[<{]%\s*$/.test(text)) {
             return this.createTagCompletions();
         }
 
-        const tagMatch = text.match(/<%\s+(\w+)\s+$/);
+        const tagMatch = text.match(/[<{]%\s+(\w+)\s+$/);
         if (tagMatch) {
             const tagName = tagMatch[1];
             if (this.isConditionTag(tagName)) {
@@ -337,25 +324,6 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
         return ["if", "else", "elseif", "else if"].includes(
             tagName.toLowerCase(),
         );
-    }
-
-    /**
-     * 提供输出块补全
-     * @param text 光标前的文本
-     * @returns 补全项列表
-     */
-    private provideOutputBlockCompletions(
-        text: string,
-    ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-        if (/<%=\s*$/.test(text)) {
-            return this.createVariableCompletions();
-        }
-
-        if (/\|\s*$/.test(text)) {
-            return this.createFilterCompletions();
-        }
-
-        return undefined;
     }
 
     /**
@@ -441,10 +409,9 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
             return codeBlockSignature;
         }
 
-        const outputBlockSignature =
-            this.tryGetOutputBlockSignature(textBeforeCursor);
-        if (outputBlockSignature) {
-            return outputBlockSignature;
+        const filterSignature = this.tryGetFilterSignature(textBeforeCursor);
+        if (filterSignature) {
+            return filterSignature;
         }
 
         return undefined;
@@ -458,7 +425,7 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
     private tryGetCodeBlockSignature(
         text: string,
     ): vscode.SignatureHelp | undefined {
-        const tagMatch = text.match(/<%\s+(\w+)\s+/);
+        const tagMatch = text.match(/[<{]%\s+(\w+)\s+/);
         if (!tagMatch) {
             return undefined;
         }
@@ -477,11 +444,11 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
     }
 
     /**
-     * 尝试获取输出块签名
+     * 尝试获取过滤器签名 过滤器在 code block 内通过 pipe 调用
      * @param text 光标前的文本
      * @returns 签名帮助信息或 undefined
      */
-    private tryGetOutputBlockSignature(
+    private tryGetFilterSignature(
         text: string,
     ): vscode.SignatureHelp | undefined {
         const filterMatch = text.match(/\|\s*(\w+)\s*\(?/);
@@ -512,7 +479,7 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
      * @returns 参数索引
      */
     private calculateActiveParameter(text: string, tagName: string): number {
-        const afterTag = text.replace(/^.*<%\s+\w+\s+/, "");
+        const afterTag = text.replace(/^.*[<{]%\s+\w+\s+/, "");
         const parts = afterTag.split(/\s+/).filter((p) => p.length > 0);
 
         if (tagName === "loop") {

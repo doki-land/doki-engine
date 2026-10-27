@@ -8,9 +8,6 @@
             "include": "#comment"
         },
         {
-            "include": "#output"
-        },
-        {
             "include": "#block"
         },
         {
@@ -39,29 +36,9 @@
                 }
             ]
         },
-        "output": {
-            "name": "meta.template.output.dejavu",
-            "begin": "<%=",
-            "end": "%>",
-            "beginCaptures": {
-                "0": {
-                    "name": "punctuation.definition.output.begin.dejavu"
-                }
-            },
-            "endCaptures": {
-                "0": {
-                    "name": "punctuation.definition.output.end.dejavu"
-                }
-            },
-            "patterns": [
-                {
-                    "include": "#expression"
-                }
-            ]
-        },
         "block": {
             "name": "meta.template.block.dejavu",
-            "begin": "<%(?!=)",
+            "begin": "<%",
             "end": "%>",
             "beginCaptures": {
                 "0": {

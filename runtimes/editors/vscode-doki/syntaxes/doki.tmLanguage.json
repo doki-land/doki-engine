@@ -8,9 +8,6 @@
             "include": "#comment"
         },
         {
-            "include": "#output"
-        },
-        {
             "include": "#block"
         },
         {
@@ -20,8 +17,8 @@
     "repository": {
         "comment": {
             "name": "comment.block.doki",
-            "begin": "<#",
-            "end": "#>",
+            "begin": "{#",
+            "end": "#}",
             "beginCaptures": {
                 "0": {
                     "name": "punctuation.definition.comment.begin.doki"
@@ -39,30 +36,10 @@
                 }
             ]
         },
-        "output": {
-            "name": "meta.template.output.doki",
-            "begin": "<%=",
-            "end": "%>",
-            "beginCaptures": {
-                "0": {
-                    "name": "punctuation.definition.output.begin.doki"
-                }
-            },
-            "endCaptures": {
-                "0": {
-                    "name": "punctuation.definition.output.end.doki"
-                }
-            },
-            "patterns": [
-                {
-                    "include": "#expression"
-                }
-            ]
-        },
         "block": {
             "name": "meta.template.block.doki",
-            "begin": "<%(?!=)",
-            "end": "%>",
+            "begin": "{%",
+            "end": "%}",
             "beginCaptures": {
                 "0": {
                     "name": "punctuation.definition.block.begin.doki"

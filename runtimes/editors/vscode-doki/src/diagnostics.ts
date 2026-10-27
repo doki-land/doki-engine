@@ -591,7 +591,6 @@ export class DiagnosticsProvider {
         const diagnostics: vscode.Diagnostic[] = [];
         const lines = content.split("\n");
 
-        const outputPattern = /<%=\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*/g;
         const definedVars = new Set<string>();
 
         for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -606,6 +605,13 @@ export class DiagnosticsProvider {
                 /for\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in/g,
             );
             for (const match of forMatch) {
+                definedVars.add(match[1]);
+            }
+
+            const loopMatch = line.matchAll(
+                /loop\s+(?:\([^)]*,\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\s+in/g,
+            );
+            for (const match of loopMatch) {
                 definedVars.add(match[1]);
             }
         }
@@ -642,40 +648,99 @@ export class DiagnosticsProvider {
             "size",
         ]);
 
-        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-            const line = lines[lineIndex];
-            let match: RegExpExecArray | null;
+        // 所有 code block 内出现的标识符都要检查
+        const blockPattern = /([<{]%[\s\S]*?[%}>])/g;
+        let blockMatch: RegExpExecArray | null;
+        const hits: Array<{ line: number; col: number; name: string }> = [];
 
-            outputPattern.lastIndex = 0;
-            while ((match = outputPattern.exec(line)) !== null) {
-                const varName = match[1];
-
-                if (!definedVars.has(varName) && !builtInVars.has(varName)) {
-                    const column = match.index + 2;
-                    const severity = this.getSeverityForCode(
-                        DiagnosticCode.UNDEFINED_VARIABLE,
-                    );
-
-                    diagnostics.push(
-                        this.createDiagnostic(
-                            {
-                                code: DiagnosticCode.UNDEFINED_VARIABLE,
-                                message: `未定义的变量: ${varName}`,
-                                line: lineIndex,
-                                column,
-                                endLine: lineIndex,
-                                endColumn: column + varName.length,
-                                severity,
-                                source: "doki",
-                            },
-                            document,
-                        ),
-                    );
-                }
+        while ((blockMatch = blockPattern.exec(content)) !== null) {
+            const blockText = blockMatch[1];
+            const blockStart = blockMatch.index;
+            const identifierPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+            let identMatch: RegExpExecArray | null;
+            while ((identMatch = identifierPattern.exec(blockText)) !== null) {
+                const lineNum =
+                    content.substring(0, blockStart + identMatch.index).split(
+                        "\n",
+                    ).length - 1;
+                const lineStart = content.lastIndexOf(
+                    "\n",
+                    blockStart + identMatch.index,
+                );
+                const col =
+                    blockStart + identMatch.index - (lineStart === -1 ? 0 : lineStart);
+                hits.push({ line: lineNum, col, name: identMatch[1] });
             }
         }
 
+        for (const hit of hits) {
+            const varName = hit.name;
+            if (
+                definedVars.has(varName) ||
+                builtInVars.has(varName) ||
+                this.isKeyword(varName)
+            ) {
+                continue;
+            }
+            const severity = this.getSeverityForCode(
+                DiagnosticCode.UNDEFINED_VARIABLE,
+            );
+            diagnostics.push(
+                this.createDiagnostic(
+                    {
+                        code: DiagnosticCode.UNDEFINED_VARIABLE,
+                        message: `未定义的变量: ${varName}`,
+                        line: hit.line,
+                        column: hit.col,
+                        endLine: hit.line,
+                        endColumn: hit.col + varName.length,
+                        severity,
+                        source: "doki",
+                    },
+                    document,
+                ),
+            );
+        }
+
         return diagnostics;
+    }
+
+    /** 语言关键字，不当作未定义变量 */
+    private isKeyword(name: string): boolean {
+        const keywords = new Set([
+            "if",
+            "else",
+            "end",
+            "endif",
+            "endfor",
+            "endwhile",
+            "endblock",
+            "endmicro",
+            "endmatch",
+            "elseif",
+            "loop",
+            "endloop",
+            "block",
+            "extends",
+            "include",
+            "let",
+            "micro",
+            "match",
+            "case",
+            "using",
+            "namespace",
+            "break",
+            "continue",
+            "return",
+            "prepend",
+            "append",
+            "super",
+            "in",
+            "do",
+            "while",
+            "for",
+        ]);
+        return keywords.has(name);
     }
 
     /**
@@ -817,22 +882,16 @@ export class DiagnosticsProvider {
 
         const codeStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("codeStart", "<%");
+            .get<string>("codeStart", "{%");
         const codeEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("codeEnd", "%>");
-        const outputStartDelim = vscode.workspace
-            .getConfiguration("doki.template.delimiters")
-            .get<string>("outputStart", "<%=");
-        const outputEndDelim = vscode.workspace
-            .getConfiguration("doki.template.delimiters")
-            .get<string>("outputEnd", "%>");
+            .get<string>("codeEnd", "%}");
         const commentStartDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentStart", "<#");
+            .get<string>("commentStart", "{#");
         const commentEndDelim = vscode.workspace
             .getConfiguration("doki.template.delimiters")
-            .get<string>("commentEnd", "#>");
+            .get<string>("commentEnd", "#}");
 
         const delimiterPairs: Array<{
             start: string;
@@ -840,7 +899,6 @@ export class DiagnosticsProvider {
             name: string;
         }> = [
             { start: codeStartDelim, end: codeEndDelim, name: "代码块" },
-            { start: outputStartDelim, end: outputEndDelim, name: "输出块" },
             { start: commentStartDelim, end: commentEndDelim, name: "注释块" },
         ];
 

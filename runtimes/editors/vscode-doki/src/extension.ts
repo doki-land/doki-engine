@@ -38,16 +38,6 @@ export interface DelimitersConfig {
     codeEnd: string;
 
     /**
-     * 输出块开始定界符
-     */
-    outputStart: string;
-
-    /**
-     * 输出块结束定界符
-     */
-    outputEnd: string;
-
-    /**
      * 注释块开始定界符
      */
     commentStart: string;
@@ -118,24 +108,16 @@ export class ConfigManager {
         return {
             codeStart: config.get<string>(
                 "template.delimiters.codeStart",
-                "<%",
+                "{%",
             ),
-            codeEnd: config.get<string>("template.delimiters.codeEnd", "%>"),
-            outputStart: config.get<string>(
-                "template.delimiters.outputStart",
-                "<%=",
-            ),
-            outputEnd: config.get<string>(
-                "template.delimiters.outputEnd",
-                "%>",
-            ),
+            codeEnd: config.get<string>("template.delimiters.codeEnd", "%}"),
             commentStart: config.get<string>(
                 "template.delimiters.commentStart",
-                "<#",
+                "{#",
             ),
             commentEnd: config.get<string>(
                 "template.delimiters.commentEnd",
-                "#>",
+                "#}",
             ),
         };
     }
@@ -159,7 +141,7 @@ export class ConfigManager {
      */
     public static getCodeStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.codeStart", "<%");
+        return config.get<string>("template.delimiters.codeStart", "{%");
     }
 
     /**
@@ -168,25 +150,7 @@ export class ConfigManager {
      */
     public static getCodeEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.codeEnd", "%>");
-    }
-
-    /**
-     * 获取输出块开始定界符
-     * @returns 输出块开始定界符
-     */
-    public static getOutputStartDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.outputStart", "<%=");
-    }
-
-    /**
-     * 获取输出块结束定界符
-     * @returns 输出块结束定界符
-     */
-    public static getOutputEndDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.outputEnd", "%>");
+        return config.get<string>("template.delimiters.codeEnd", "%}");
     }
 
     /**
@@ -195,7 +159,7 @@ export class ConfigManager {
      */
     public static getCommentStartDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentStart", "<#");
+        return config.get<string>("template.delimiters.commentStart", "{#");
     }
 
     /**
@@ -204,7 +168,7 @@ export class ConfigManager {
      */
     public static getCommentEndDelimiter(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-        return config.get<string>("template.delimiters.commentEnd", "#>");
+        return config.get<string>("template.delimiters.commentEnd", "#}");
     }
 
     /**
