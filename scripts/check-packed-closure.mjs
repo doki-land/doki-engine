@@ -375,7 +375,7 @@ async function main() {
 
     // Verify the platform tarball structure — we pack it regardless of runner arch,
     // cross-arch runners just can't install it directly.
-    const platformPkgJson = readJson(platformTarballPkgJson(platformTarball))
+    const platformPkgJson = platformTarballPkgJson(platformTarball)
     assert(platformPkgJson.name === plat.name, `platform tarball name ${platformPkgJson.name} != ${plat.name}`)
     assert(platformPkgJson.version === args.version, `platform tarball version ${platformPkgJson.version} != ${args.version}`)
     assert(platformPkgJson.os?.includes(plat.os), `platform tarball os ${platformPkgJson.os} missing ${plat.os}`)
