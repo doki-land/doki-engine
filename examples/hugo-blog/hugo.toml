@@ -1,0 +1,20 @@
+baseURL = "https://fate.example.invalid/"
+locale = "zh-CN"
+title = "Fate · 清透角色的笔记"
+
+theme = "hugo-theme-fate"
+
+[taxonomies]
+  tag = "tags"
+
+[permalinks]
+  posts = "/posts/:slug/"
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = false
+
+[build]
+  publishDir = "public"

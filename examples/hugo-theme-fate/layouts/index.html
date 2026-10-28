@@ -1,0 +1,23 @@
+{{ define "main" }}
+<div class="container home">
+  {{ .Content }}
+  <section class="home-latest">
+    <h2>最新文章</h2>
+    {{ range first 6 (where .Site.RegularPages "Type" "posts") }}
+    <article class="post-card">
+      <h3 class="post-title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+      <div class="post-meta">
+        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+        {{ with .Params.tags }}
+        <span class="post-tags">
+          {{ range . }}· <a href="{{ "/tags/" | relURL }}{{ . | urlize }}/">{{ . }}</a>{{ end }}
+        </span>
+        {{ end }}
+      </div>
+      {{ with .Description }}<p class="post-desc">{{ . }}</p>{{ end }}
+    </article>
+    {{ end }}
+    <p class="home-more"><a href="{{ "/archive/" | relURL }}">查看全部 →</a></p>
+  </section>
+</div>
+{{ end }}

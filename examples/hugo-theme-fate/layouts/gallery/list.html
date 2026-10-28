@@ -1,0 +1,28 @@
+{{ define "main" }}
+<div class="container page-list">
+  <header class="page-header">
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}<p class="page-desc">{{ . }}</p>{{ end }}
+  </header>
+  {{ $galleryPages := where .Site.RegularPages "Type" "posts" }}
+  {{ $galleryPages = where $galleryPages "Params.tags" "intersect" (slice "相册") }}
+  {{ if $galleryPages }}
+    {{ range $galleryPages.ByDate.Reverse }}
+    <article class="post-card">
+      <h2 class="post-title"><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+      <div class="post-meta">
+        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+        {{ with .Params.tags }}
+        <span class="post-tags">
+          {{ range . }}· <a href="{{ "/tags/" | relURL }}{{ . | urlize }}/">{{ . }}</a>{{ end }}
+        </span>
+        {{ end }}
+      </div>
+      {{ with .Description }}<p class="post-desc">{{ . }}</p>{{ end }}
+    </article>
+    {{ end }}
+  {{ else }}
+    <p class="empty">暂无相册内容。</p>
+  {{ end }}
+</div>
+{{ end }}

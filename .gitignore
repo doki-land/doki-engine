@@ -30,3 +30,7 @@ pnpm-lock.yaml
 packages/doki/native/
 packages/.doki-core.napi-stage-*/
 packages/**/.napi-rs-*/
+
+# Hugo build artifacts
+public/
+.hugo_build.lock

@@ -1,0 +1,8 @@
+name = "hugo-theme-fate"
+license = "MIT"
+licenselink = "https://example.invalid/license"
+description = "Fate theme for the Hugo blog example."
+homepage = "https://example.invalid/fate"
+tags = ["blog", "fate", "light", "pink", "blue", "purple"]
+features = ["blog", "tags", "archive", "gallery"]
+min_version = "0.120.0"
