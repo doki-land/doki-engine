@@ -8,3 +8,19 @@ base_url = "https://fate.example.com"
 
 [theme]
 path = "../doki-theme-fate"
+
+[[plugins]]
+path = "../../runtimes/doki/templates/blog/plugins/sitemap"
+enabled = true
+
+[[plugins]]
+path = "../../runtimes/doki/templates/blog/plugins/robots"
+enabled = true
+
+[[plugins]]
+path = "../../runtimes/doki/templates/blog/plugins/feed"
+enabled = true
+
+[[plugins]]
+path = "../../runtimes/doki/templates/blog/plugins/search"
+enabled = true
