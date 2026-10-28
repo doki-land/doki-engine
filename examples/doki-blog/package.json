@@ -1,0 +1,10 @@
+{
+  "name": "doki-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Doki Fate theme blog example",
+  "scripts": {
+    "dev": "doki dev --watch",
+    "build": "doki build"
+  }
+}

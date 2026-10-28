@@ -1,0 +1,13 @@
+{
+  "templates": "layouts",
+  "assets": "assets",
+  "layouts": {
+    "layout": "layout.dejavu",
+    "page": "layout.dejavu",
+    "index": "index.dejavu",
+    "post": "post.dejavu",
+    "archive": "archive.dejavu",
+    "tag": "tag.dejavu",
+    "gallery": "gallery.dejavu"
+  }
+}

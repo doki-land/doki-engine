@@ -1,0 +1,10 @@
+title = "Fate · 清透角色的笔记"
+description = "Notes, images, and small observations."
+content_dir = "../_shared-corpus/content"
+output_dir = "dist"
+public_dir = "public"
+incremental = true
+base_url = "https://fate.example.com"
+
+[theme]
+path = "../doki-theme-fate"
