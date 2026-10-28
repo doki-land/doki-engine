@@ -237,7 +237,7 @@ async function main() {
     })
 
     const packDir = path.join(tmpRoot, 'pack')
-    npmPack(platformDir, packDir)
+    packed.push(npmPack(platformDir, packDir))
     for (const pkg of JS_PACKAGES) {
       packed.push(npmPack(path.join(root, pkg.path), packDir))
     }
