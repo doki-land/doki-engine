@@ -1,0 +1,14 @@
+<section class="page">
+  <% if (page.title) { %>
+    <h1><%= page.title %></h1>
+  <% } %>
+  <% if (page.date) { %>
+    <p class="post-date"><%= page.date.format('YYYY-MM-DD') %></p>
+  <% } %>
+  <% if (page.description) { %>
+    <p class="post-description"><%= page.description %></p>
+  <% } %>
+  <div class="content">
+    <%- page.content %>
+  </div>
+</section>

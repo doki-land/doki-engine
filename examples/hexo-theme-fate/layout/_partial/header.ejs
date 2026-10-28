@@ -1,0 +1,10 @@
+<header class="site-header">
+  <a class="brand" href="<%- url_for('/') %>"><%= config.title %></a>
+  <nav>
+    <a href="<%- url_for('/') %>"       class="<%- is_current('/') ? 'current' : '' %>">首页</a>
+    <a href="<%- url_for('/tags/') %>"   class="<%- is_current('/tags/') ? 'current' : '' %>">标签</a>
+    <a href="<%- url_for('/archive/') %>" class="<%- is_current('/archive/') ? 'current' : '' %>">归档</a>
+    <a href="<%- url_for('/gallery/') %>" class="<%- is_current('/gallery/') ? 'current' : '' %>">相册</a>
+    <a href="<%- url_for('/about/') %>"   class="<%- is_current('/about/') ? 'current' : '' %>">关于</a>
+  </nav>
+</header>

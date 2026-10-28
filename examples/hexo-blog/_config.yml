@@ -1,0 +1,72 @@
+# Hexo config for hexo-blog
+
+# Site
+title: Fate · 清透角色的笔记
+subtitle: ''
+description: Fate 主题站点。清透、角色优先、蓝粉白紫。分享 Doki / Dejavu / Notedown 的技术笔记，偶尔放上角色摄影和生活片段。
+author: Doki team
+language: zh-CN
+timezone: Asia/Shanghai
+
+# URL
+url: http://example.invalid
+root: /
+permalink: posts/:title/
+relative_link: false
+
+# Archive output path (Hexo default is "archives")
+archive_dir: archive
+
+# Writing
+new_post_name: :year-:month-:day-:title.md
+default_layout: post
+titlecase: false
+auto_spacing: false
+post_asset_folder: false
+
+# Home page: 用 index.md 内容渲染（layout: page，站点根由 Hexo 自动列出站点）
+index_generator:
+  path: ''
+  per_page: 10
+  order_by: '-date'
+
+# Category & Tag
+default_category: uncategorized
+category_map:
+tag_map:
+
+# Archive (由 hexo-generator-archive 消费)
+archive_generator:
+  enabled: true
+  per_page: 20
+  yearly: false
+  monthly: false
+  daily: false
+
+# Tag (由 hexo-generator-tag 消费 —— 除了内置 /tags/ 聚合页)
+tag_generator:
+  enable_index_page: false
+
+# Date / Time format
+date_format: YYYY-MM-DD
+time_format: HH:mm:ss
+
+# Pagination
+per_page: 10
+pagination_dir: page
+
+# Extensions
+theme: fate
+
+# 语法高亮（hexo 的 highlight.js，server 侧渲染）
+highlight:
+  enable: true
+  line_number: true
+  auto_detect: true
+  tab_replace: '  '
+  wrap: true
+  hljs: false
+
+# Deployment — 占位
+deploy:
+  type: ''

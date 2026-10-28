@@ -1,0 +1,19 @@
+<section class="page">
+  <p class="eyebrow">Gallery</p>
+  <h1>相册</h1>
+  <p class="post-description">
+    以下是标记了「相册」标签的文章，角色摄影与清透视觉方向集中在这里。
+    正式素材会按文章封面放在 <code>content/assets/album-*/</code> 下。
+  </p>
+  <ul class="archive-list">
+    <% site.posts.each(function(post) { %>
+      <% var hasAlbum = (post.tags || []).some(function(t) { return t.name === '相册'; }); %>
+      <% if (hasAlbum) { %>
+        <li>
+          <a href="<%- url_for(post.path) %>"><%= post.title %></a>
+          <span class="tag-count"><%= post.date.format('YYYY-MM-DD') %></span>
+        </li>
+      <% } %>
+    <% }) %>
+  </ul>
+</section>

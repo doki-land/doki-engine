@@ -1,0 +1,25 @@
+<section class="page">
+  <% if (page.tag) { %>
+    <p class="eyebrow">Tag</p>
+    <h1>#<%= page.tag %></h1>
+    <ul class="archive-list">
+      <% page.posts.each(function(post) { %>
+        <li>
+          <a href="<%- url_for(post.path) %>"><%= post.title %></a>
+          <span class="tag-count"><%= post.date.format('YYYY-MM-DD') %></span>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="eyebrow">Tags</p>
+    <h1>标签一览</h1>
+    <ul class="tag-list">
+      <% site.tags.each(function(tag) { %>
+        <li>
+          <a href="<%- url_for(tag.path) %>">#<%= tag.name %></a>
+          <span class="tag-count"><%= tag.length %> 篇</span>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>

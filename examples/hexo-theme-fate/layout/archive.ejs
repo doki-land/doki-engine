@@ -1,0 +1,12 @@
+<section class="page">
+  <p class="eyebrow">Archive</p>
+  <h1>归档</h1>
+  <ul class="archive-list">
+    <% site.posts.each(function(post) { %>
+      <li>
+        <a href="<%- url_for(post.path) %>"><%= post.title %></a>
+        <span class="tag-count"><%= post.date.format('YYYY-MM-DD') %></span>
+      </li>
+    <% }) %>
+  </ul>
+</section>

@@ -1,0 +1,9 @@
+node_modules/
+public/
+db.json
+.deploy*/
+*.log
+.DS_Store
+
+# themes/fate 由 npm preinstall 创建 junction 到 ../hexo-theme-fate
+themes/fate/

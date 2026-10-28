@@ -1,0 +1,18 @@
+<div class="post-row">
+  <div>
+    <p class="post-date"><%= post.date.format('YYYY-MM-DD') %></p>
+    <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
+  </div>
+  <div>
+    <% if (post.description) { %>
+      <p><%= post.description %></p>
+    <% } %>
+    <% if (post.tags && post.tags.length) { %>
+      <div class="tags">
+        <% post.tags.each(function(tag) { %>
+          <a href="<%- url_for(tag.path) %>">#<%= tag.name %></a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
