@@ -4,14 +4,13 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title><% page.title %> · <% site.title %></title>
-<% if site.description %>
-<meta name="description" content="<% site.description %>"/>
-<% end if %>
 <% if page.description %>
 <meta name="description" content="<% page.description %>"/>
+<% else if site.description %>
+<meta name="description" content="<% site.description %>"/>
 <% end if %>
 <% if site.baseUrl %>
-<link rel="canonical" href="<% site.baseUrl %><% page.relPath %>"/>
+<link rel="canonical" href="<% site.baseUrl %>/<% page.relPath %>"/>
 <% end if %>
 <link rel="stylesheet" href="/assets/style.css"/>
 </head>
@@ -29,6 +28,46 @@
   </div>
 </header>
 
+<% if page.relPath == "index.md" %>
+<main class="site-main home-main">
+  <section class="hero">
+    <% if page.title %>
+    <p class="eyebrow"><% site.title %></p>
+    <h1 class="hero-title"><% page.title %></h1>
+    <% end if %>
+    <% if page.description %>
+    <p class="hero-copy"><% page.description %></p>
+    <% end if %>
+  </section>
+  <article class="site-article home-content">
+    <div class="article-content">
+      <% content |> safe %>
+    </div>
+  </article>
+
+<% else if "posts/" in page.relPath %>
+<main class="site-main">
+  <article class="site-article post-article">
+    <header class="article-header">
+      <% if page.title %>
+      <h1 class="article-title"><% page.title %></h1>
+      <% end if %>
+      <div class="article-meta">
+        <% if page.date %>
+        <time class="article-date" datetime="<% page.date %>"><% page.date %></time>
+        <% end if %>
+      </div>
+    </header>
+    <div class="article-content">
+      <% content |> safe %>
+    </div>
+    <nav class="post-nav" aria-label="Post navigation">
+      <a class="post-nav-prev" href="/archive/">← 全部归档</a>
+      <a class="post-nav-next" href="/archive/">继续浏览 →</a>
+    </nav>
+  </article>
+
+<% else %>
 <main class="site-main">
   <article class="site-article">
     <header class="article-header">
@@ -45,13 +84,16 @@
       <% content |> safe %>
     </div>
   </article>
+<% end if %>
 </main>
 
 <footer class="site-footer">
   <div class="footer-inner">
     <p class="footer-copy">© <% site.author %></p>
+    <% if page.relPath == "index.md" %>
     <% if site.description %>
     <p class="footer-tagline"><% site.description %></p>
+    <% end if %>
     <% end if %>
     <p class="footer-powered">Built with Doki · Fate theme</p>
   </div>
