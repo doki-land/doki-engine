@@ -41,6 +41,7 @@ import {
 } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import {
   JS_PACKAGES,
@@ -161,6 +162,82 @@ function runtimeMatchesHost(plat) {
   return plat.os.includes(process.platform) && plat.cpu.includes(process.arch)
 }
 
+/** Parse a node-tar header into { name, size } without extracting the file. */
+function parseTarEntry(buf, offset = 0) {
+  const nameRaw = buf.slice(offset, offset + 100)
+  const nullIdx = nameRaw.indexOf(0)
+  const name = Buffer.isBuffer(nameRaw)
+    ? nameRaw.slice(0, nullIdx === -1 ? 100 : nullIdx).toString('utf8')
+    : String(nameRaw)
+  const sizeRaw = buf.slice(offset + 124, offset + 136).toString('ascii').trim()
+  const size = sizeRaw.length === 0 ? 0 : parseInt(sizeRaw, 8)
+  return { name, size }
+}
+
+/** Walk a gzipped node-tar archive and yield [{ name, size }] for every regular file. */
+function* iterTarballEntries(tgzPath) {
+  const raw = zlib.gunzipSync(readFileSync(tgzPath))
+  let offset = 0
+  while (offset + 512 <= raw.length) {
+    const { name, size } = parseTarEntry(raw, offset)
+    if (name.length === 0) {
+      // Two consecutive empty 512-byte blocks mark end-of-archive per POSIX tar.
+      if (offset + 1024 <= raw.length && parseTarEntry(raw, offset + 512).name.length === 0) break
+      offset += 512
+      continue
+    }
+    const typeflag = raw[offset + 156]
+    // '0' or '\0' = regular file; skip symlinks/devices/etc
+    if ((typeflag === 0x30 || typeflag === 0x00) && size > 0) {
+      yield { name, size }
+    }
+    // Round up to multiple of 512
+    const dataBlocks = Math.ceil(size / 512)
+    offset += 512 + dataBlocks * 512
+  }
+}
+
+/** Return the path inside the tarball for package.json (node-tar prefixes package/). */
+function packageJsonInsideTarball(tgzPath) {
+  for (const entry of iterTarballEntries(tgzPath)) {
+    const normalized = entry.name.startsWith('package/') ? entry.name.slice('package/'.length) : entry.name
+    if (normalized === 'package.json') return { found: true, entry }
+  }
+  return { found: false }
+}
+
+/** Extract and parse package.json from a gzipped tarball without writing to disk. */
+function platformTarballPkgJson(tgzPath) {
+  const raw = zlib.gunzipSync(readFileSync(tgzPath))
+  let offset = 0
+  while (offset + 512 <= raw.length) {
+    const { name, size } = parseTarEntry(raw, offset)
+    if (name.length === 0) {
+      if (offset + 1024 <= raw.length && parseTarEntry(raw, offset + 512).name.length === 0) break
+      offset += 512
+      continue
+    }
+    const normalized = name.startsWith('package/') ? name.slice('package/'.length) : name
+    if (normalized === 'package.json' && size > 0) {
+      const buf = raw.slice(offset + 512, offset + 512 + size)
+      return JSON.parse(buf.toString('utf8'))
+    }
+    const dataBlocks = Math.ceil(size / 512)
+    offset += 512 + dataBlocks * 512
+  }
+  throw new Error(`no package.json inside ${tgzPath}`)
+}
+
+/** Check whether a tarball contains a file matching the given relative path. */
+function tarballHasFile(tgzPath, relPath) {
+  // Some tarballs prefix files with "package/", some don't — accept both.
+  const needles = new Set([relPath, `package/${relPath}`])
+  for (const entry of iterTarballEntries(tgzPath)) {
+    if (needles.has(entry.name)) return true
+  }
+  return false
+}
+
 function printCommandOutput(label, result) {
   const text = `${result.stdout || ''}${result.stderr || ''}`.trim()
   if (!text) return
@@ -237,10 +314,12 @@ async function main() {
     })
 
     const packDir = path.join(tmpRoot, 'pack')
-    packed.push(npmPack(platformDir, packDir))
+    const platformTarball = npmPack(platformDir, packDir)
+    const jsTarballs = []
     for (const pkg of JS_PACKAGES) {
-      packed.push(npmPack(path.join(root, pkg.path), packDir))
+      jsTarballs.push(npmPack(path.join(root, pkg.path), packDir))
     }
+    packed.push(platformTarball, ...jsTarballs)
     console.log('packed:')
     for (const tarball of packed) console.log(`  ${path.basename(tarball)}`)
 
@@ -260,9 +339,10 @@ async function main() {
     // Mirror dejavu: --save-exact keeps the local-tarball hoisting stable so
     // npm filters optional deps by `os`/`cpu` and installs the matching
     // platform package. npm/cli#4828 is avoided by running on a recent npm.
+    const tarballsToInstall = fullMode ? packed : jsTarballs
     const installArgs = [
       'install',
-      ...packed,
+      ...tarballsToInstall,
       '--no-audit',
       '--no-fund',
       '--save-exact',
@@ -270,11 +350,12 @@ async function main() {
     if (!fullMode) {
       console.log(
         `notice: ${args.host} cannot run on this node (${process.platform}/${process.arch}); ` +
-          'verifying the packed closure only',
+          'verifying the packed closure only (skip install of platform tarball)',
       )
     }
     runOk('npm', installArgs, { cwd: consumer })
 
+    // Always verify JS packages and optional dep wiring.
     const installedRoot = path.join(consumer, 'node_modules')
     const installedDoki = readJson(path.join(installedRoot, '@doki-land/doki/package.json'))
     assert(
@@ -285,18 +366,6 @@ async function main() {
       installedDoki.optionalDependencies?.[plat.name] === args.version,
       `@doki-land/doki optionalDependencies missing ${plat.name}@${args.version}`,
     )
-
-    const installedPlatform = readJson(
-      path.join(installedRoot, plat.name, 'package.json'),
-    )
-    assert(
-      installedPlatform.version === args.version,
-      `installed ${plat.name}@${installedPlatform.version} != ${args.version}`,
-    )
-    assert(
-      existsSync(path.join(installedRoot, plat.name, installedPlatform.main)),
-      `${plat.name} tarball is missing ${installedPlatform.main}`,
-    )
     assert(
       !existsSync(
         path.join(installedRoot, '@doki-land/doki/native', `doki-core.${args.host}.node`),
@@ -304,8 +373,23 @@ async function main() {
       '@doki-land/doki tarball bundles a native binary, optional closure is not tested',
     )
 
+    // Verify the platform tarball structure — we pack it regardless of runner arch,
+    // cross-arch runners just can't install it directly.
+    const platformPkgJson = readJson(platformTarballPkgJson(platformTarball))
+    assert(platformPkgJson.name === plat.name, `platform tarball name ${platformPkgJson.name} != ${plat.name}`)
+    assert(platformPkgJson.version === args.version, `platform tarball version ${platformPkgJson.version} != ${args.version}`)
+    assert(platformPkgJson.os?.includes(plat.os), `platform tarball os ${platformPkgJson.os} missing ${plat.os}`)
+    assert(platformPkgJson.cpu?.includes(plat.cpu), `platform tarball cpu ${platformPkgJson.cpu} missing ${plat.cpu}`)
+    const platformMain = platformPkgJson.main
+    assert(platformMain, 'platform tarball has no main field')
+    const nodeExists = tarballHasFile(platformTarball, platformMain)
+    assert(nodeExists, `platform tarball ${plat.name} is missing ${platformMain}`)
+    console.log(`platform tarball ${plat.name} structure ok (version/os/cpu/.node present)`)
+
     const dokiLandEntries = readdirSync(path.join(installedRoot, '@doki-land')).sort()
-    const expectedEntries = ['doki', 'doki-plugin', 'doki-theme', platDirName].sort()
+    const expectedEntriesFull = ['doki', 'doki-plugin', 'doki-theme', platDirName].sort()
+    const expectedEntriesPartial = ['doki', 'doki-plugin', 'doki-theme'].sort()
+    const expectedEntries = fullMode ? expectedEntriesFull : expectedEntriesPartial
     assert(
       JSON.stringify(dokiLandEntries) === JSON.stringify(expectedEntries),
       `unexpected @doki-land install set: ${dokiLandEntries.join(', ')} (expected ${expectedEntries.join(', ')})`,
@@ -318,6 +402,19 @@ async function main() {
       console.log('packed closure ok (native execution skipped: cross-arch runner)')
       return
     }
+
+    // Full-mode: also verify platform package installed from optionalDeps.
+    const installedPlatform = readJson(
+      path.join(installedRoot, plat.name, 'package.json'),
+    )
+    assert(
+      installedPlatform.version === args.version,
+      `installed ${plat.name}@${installedPlatform.version} != ${args.version}`,
+    )
+    assert(
+      existsSync(path.join(installedRoot, plat.name, installedPlatform.main)),
+      `${plat.name} tarball is missing ${installedPlatform.main}`,
+    )
 
     const doctor = runOk(process.execPath, [cli, 'doctor'], { cwd: consumer })
     printCommandOutput('doki doctor', doctor)
