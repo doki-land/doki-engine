@@ -5,18 +5,17 @@ export default definePlugin({
     capabilities: ["artifacts:search"],
     hooks: {
         async contributeArtifacts(input) {
-            const pages = Array.isArray(input?.contentIds)
-                ? input.contentIds
-                : [];
-            const title = input?.title || "Site";
-            const entries = pages.map((id) => {
-                const slug = String(id).replace(/\.mdx?$/, "");
-                return {
-                    id: String(id),
-                    title: slug,
-                    url: `/pages/${slug}.html`,
-                };
-            });
+            const site = input?.site || {};
+            const baseUrl = (site.baseUrl || "").replace(/\/$/, "");
+            const title = site.title || "Site";
+            const pages = Array.isArray(input?.pages) ? input.pages : [];
+            const entries = pages
+                .filter((page) => page.type === "post")
+                .map((page) => ({
+                    id: page.id,
+                    title: page.title || page.route,
+                    url: `${baseUrl}${page.url}`,
+                }));
             const json = JSON.stringify(
                 {
                     version: 1,

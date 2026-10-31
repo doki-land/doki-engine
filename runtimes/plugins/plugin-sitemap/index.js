@@ -15,16 +15,12 @@ export default definePlugin({
             return { ok: true };
         },
         async contributeArtifacts(input) {
-            const baseUrl = (input?.baseUrl || "").replace(/\/$/, "");
-            const pages = Array.isArray(input?.contentIds)
-                ? input.contentIds
-                : [];
-            const urls = pages.map((id) => {
-                const loc = baseUrl
-                    ? `${baseUrl}/pages/${String(id).replace(/\.mdx?$/, "")}.html`
-                    : `/pages/${String(id).replace(/\.mdx?$/, "")}.html`;
-                return `  <url><loc>${loc}</loc></url>`;
-            });
+            const site = input?.site || {};
+            const baseUrl = (site.baseUrl || "").replace(/\/$/, "");
+            const pages = Array.isArray(input?.pages) ? input.pages : [];
+            const urls = pages
+                .filter((page) => !page.draft)
+                .map((page) => `  <url><loc>${baseUrl}${page.url}</loc></url>`);
             const xml = [
                 '<?xml version="1.0" encoding="UTF-8"?>',
                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',

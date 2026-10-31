@@ -28,7 +28,7 @@
   </div>
 </header>
 
-<% if page.relPath == "index.md" %>
+<% if page.type == "home" %>
 <main class="site-main home-main">
   <section class="hero">
     <% if page.title %>
@@ -45,7 +45,7 @@
     </div>
   </article>
 
-<% else if "posts/" in page.relPath %>
+<% else if page.type == "post" %>
 <main class="site-main">
   <article class="site-article post-article">
     <header class="article-header">
@@ -90,7 +90,7 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <p class="footer-copy">© <% site.author %></p>
-    <% if page.relPath == "index.md" %>
+    <% if page.type == "home" %>
     <% if site.description %>
     <p class="footer-tagline"><% site.description %></p>
     <% end if %>

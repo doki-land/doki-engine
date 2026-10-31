@@ -15,6 +15,8 @@ pub struct ParsedDocument {
 pub struct FrontMatter {
     pub title: Option<String>,
     pub description: Option<String>,
+    /// Front matter `type` (`home` / `post` / `page`), validated by the site model.
+    pub page_type: Option<String>,
     pub layout: Option<String>,
     pub date: Option<String>,
     pub draft: bool,
@@ -27,6 +29,7 @@ impl FrontMatter {
     pub fn from_map(fields: Map<String, Value>) -> Self {
         let title = string_field(&fields, "title");
         let description = string_field(&fields, "description");
+        let page_type = string_field(&fields, "type");
         let layout = string_field(&fields, "layout");
         let date = string_field(&fields, "date");
         let draft = bool_field(&fields, "draft").unwrap_or(false);
@@ -34,6 +37,7 @@ impl FrontMatter {
         Self {
             title,
             description,
+            page_type,
             layout,
             date,
             draft,
@@ -161,10 +165,11 @@ mod tests {
     #[test]
     fn parses_yaml_front_matter() {
         let doc = parse_document(
-            "---\ntitle: Hello\ndraft: true\nweight: 3\n---\n\n# Body\n",
+            "---\ntitle: Hello\ntype: page\ndraft: true\nweight: 3\n---\n\n# Body\n",
         )
         .unwrap();
         assert_eq!(doc.front_matter.title.as_deref(), Some("Hello"));
+        assert_eq!(doc.front_matter.page_type.as_deref(), Some("page"));
         assert!(doc.front_matter.draft);
         assert_eq!(doc.front_matter.weight, Some(3));
         assert!(doc.body.contains("# Body"));

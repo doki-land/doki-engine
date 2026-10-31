@@ -11,17 +11,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::json;
 
 use crate::config::{load_project_config, LoadOptions, ProjectConfig, ProjectPaths};
+use crate::diagnostic::Diagnostic;
 use crate::error::{CoreError, CoreResult};
-use crate::graph::{
-    discover_markdown_content, load_markdown_node, staging_page_rel, ContentGraph, ContentId,
-};
-use crate::permalink::PermalinkPlan;
+use crate::graph::{discover_markdown_content, load_markdown_node, ContentGraph, ContentId};
 use crate::protocol::{
     BuildMode, BuildPhase, BuildPlan, BuildResult, ExplainRebuild, ExtensionKind,
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
 use crate::render::render_page;
+use crate::site::{output_rel, SiteModel, SitePage, ROUTE_CONFLICT_CODE};
 use crate::staging::StagingArea;
 
 static SESSION_SEQ: AtomicU64 = AtomicU64::new(1);
@@ -40,8 +39,10 @@ struct ActiveBuild {
     build_id: String,
     mode: BuildMode,
     phase: BuildPhase,
-    diagnostics: Vec<crate::diagnostic::Diagnostic>,
+    diagnostics: Vec<Diagnostic>,
     cancelled: bool,
+    /// Site model authority for render jobs, hook payloads and manifests.
+    site: SiteModel,
     staging: StagingArea,
     /// `None` = render all publishable pages; `Some` = only these ids (incremental).
     render_ids: Option<BTreeSet<ContentId>>,
@@ -133,14 +134,27 @@ impl BuildSession {
         matches!(mode, BuildMode::Development)
     }
 
-    fn publishable_ids(&self, mode: BuildMode) -> Vec<ContentId> {
-        let include_drafts = self.include_drafts(mode);
-        self.graph
-            .nodes
-            .values()
-            .filter(|n| include_drafts || !n.front_matter.draft)
-            .map(|n| n.id.clone())
-            .collect()
+    /// Serialized site pages visible to plugins in the active build mode.
+    fn pages_json(&self, active: &ActiveBuild) -> serde_json::Value {
+        let include_drafts = self.include_drafts(active.mode);
+        let pages: Vec<&SitePage> = active
+            .site
+            .pages()
+            .iter()
+            .filter(|page| include_drafts || !page.draft)
+            .collect();
+        serde_json::to_value(pages).expect("site pages serialize")
+    }
+
+    /// Site summary handed to artifact plugins.
+    fn site_json(&self, active: &ActiveBuild) -> serde_json::Value {
+        let include_drafts = self.include_drafts(active.mode);
+        json!({
+            "title": self.config.title,
+            "baseUrl": self.config.base_url,
+            "lang": self.config.lang,
+            "postCount": active.site.posts(include_drafts).len(),
+        })
     }
 
     /// Start (or restart) a segmented build. Returns the first plan; may already be ReadyToCommit
@@ -200,16 +214,36 @@ impl BuildSession {
         let output_root = self.paths.root.join(&self.config.output_dir);
         let staging = StagingArea::create(&output_root, &build_id)?;
 
-        self.active = Some(ActiveBuild {
+        let (site, site_diagnostics) = SiteModel::build(&self.graph);
+        let conflicts: Vec<Diagnostic> = site_diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == ROUTE_CONFLICT_CODE)
+            .cloned()
+            .collect();
+
+        let active = ActiveBuild {
             build_id,
             mode,
             phase: BuildPhase::ValidateConfig,
-            diagnostics: Vec::new(),
+            diagnostics: site_diagnostics,
             cancelled: false,
+            site,
             staging,
             render_ids,
             full_output_replace,
-        });
+        };
+
+        if !conflicts.is_empty() {
+            active.staging.discard();
+            let message = conflicts
+                .iter()
+                .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message))
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Err(CoreError::build(message));
+        }
+
+        self.active = Some(active);
 
         self.skip_empty_hook_phases()
     }
@@ -319,16 +353,20 @@ impl BuildSession {
         let full_replace = active.full_output_replace;
         let output_dir = self.paths.root.join(&self.config.output_dir);
 
-        let content_ids = self.publishable_ids(mode);
-        let page_files: Vec<String> = content_ids
+        let include_drafts = self.include_drafts(mode);
+        let pages: Vec<&SitePage> = active
+            .site
+            .pages()
             .iter()
-            .filter_map(|id| self.graph.nodes.get(id))
-            .map(staging_page_rel)
+            .filter(|page| include_drafts || !page.draft)
             .collect();
+        let content_ids: Vec<ContentId> = pages.iter().map(|page| page.id.clone()).collect();
+        let page_files: Vec<String> = pages.iter().map(|page| page.output.clone()).collect();
         let manifest = json!({
             "buildId": build_id,
             "title": self.config.title,
             "content": content_ids.iter().map(|id| &id.0).collect::<Vec<_>>(),
+            "pages": pages,
             "files": page_files,
         });
 
@@ -373,6 +411,7 @@ impl BuildSession {
             "mode": format!("{:?}", mode).to_lowercase(),
             "outputDir": self.config.output_dir,
             "content": content_ids.iter().map(|id| &id.0).collect::<Vec<_>>(),
+            "pages": pages,
             "files": &committed,
             "extensions": &self.extensions,
             "incremental": self.config.incremental && !full_replace,
@@ -474,7 +513,7 @@ impl BuildSession {
                 FileChangeKind::Remove => {
                     let closure = self.graph.invalidate_closure(&id);
                     if let Some(node) = self.graph.remove(&id) {
-                        self.pending_deletes.insert(staging_page_rel(&node));
+                        self.pending_deletes.insert(output_rel(&node.rel_path));
                         invalidated.extend(closure);
                         self.dirty.insert(id);
                     }
@@ -484,14 +523,14 @@ impl BuildSession {
                     if abs.is_file() {
                         let node = load_markdown_node(&content_root, &abs)?;
                         let closure = self.graph.invalidate_closure(&node.id);
-                        self.pending_deletes.remove(&staging_page_rel(&node));
+                        self.pending_deletes.remove(&output_rel(&node.rel_path));
                         self.graph.insert(node);
                         invalidated.extend(closure);
                         self.dirty.insert(id);
                     } else if change.kind == FileChangeKind::Modify {
                         let closure = self.graph.invalidate_closure(&id);
                         if let Some(node) = self.graph.remove(&id) {
-                            self.pending_deletes.insert(staging_page_rel(&node));
+                            self.pending_deletes.insert(output_rel(&node.rel_path));
                             invalidated.extend(closure);
                             self.dirty.insert(id);
                         }
@@ -559,18 +598,11 @@ impl BuildSession {
                 })
             }),
             BuildPhase::TransformContent => {
-                let ids: Vec<_> = match &active.render_ids {
-                    Some(set) => set.iter().map(|c| c.0.clone()).collect(),
-                    None => self
-                        .publishable_ids(active.mode)
-                        .into_iter()
-                        .map(|c| c.0)
-                        .collect(),
-                };
+                let pages = self.pages_json(active);
                 let mut items = self.hooks_for(HookKind::TransformContent, |id| {
                     json!({
                         "pluginId": id,
-                        "contentIds": ids,
+                        "pages": pages,
                     })
                 });
                 items.extend(self.hooks_for(HookKind::GenerateContent, |id| {
@@ -579,24 +611,20 @@ impl BuildSession {
                 items
             }
             BuildPhase::ContributeArtifacts => {
-                let ids: Vec<_> = self
-                    .publishable_ids(active.mode)
-                    .into_iter()
-                    .map(|c| c.0)
-                    .collect();
+                let pages = self.pages_json(active);
+                let site = self.site_json(active);
                 let mut items = self.hooks_for(HookKind::ContributeArtifacts, |id| {
                     json!({
                         "pluginId": id,
-                        "title": self.config.title,
-                        "baseUrl": self.config.base_url,
-                        "contentIds": ids,
+                        "site": site,
+                        "pages": pages,
                         "outputDir": self.config.output_dir,
                     })
                 });
                 items.extend(self.hooks_for(HookKind::BuildComplete, |id| {
                     json!({
                         "pluginId": id,
-                        "contentIds": ids,
+                        "pages": pages,
                         "readOnly": true,
                     })
                 }));
@@ -607,7 +635,15 @@ impl BuildSession {
 
         let content_count = match &active.render_ids {
             Some(set) => set.len(),
-            None => self.publishable_ids(active.mode).len(),
+            None => {
+                let include_drafts = self.include_drafts(active.mode);
+                active
+                    .site
+                    .pages()
+                    .iter()
+                    .filter(|page| include_drafts || !page.draft)
+                    .count()
+            }
         };
 
         BuildPlan {
@@ -639,34 +675,50 @@ impl BuildSession {
     }
 
     fn run_render(&mut self) -> CoreResult<()> {
-        let mode = self
-            .active
-            .as_ref()
-            .ok_or_else(|| CoreError::build("no active build"))?
-            .mode;
-        let render_ids = self
-            .active
-            .as_ref()
-            .unwrap()
-            .render_ids
-            .clone()
-            .unwrap_or_else(|| self.publishable_ids(mode).into_iter().collect());
+        let (mode, site_render_ids) = {
+            let active = self
+                .active
+                .as_ref()
+                .ok_or_else(|| CoreError::build("no active build"))?;
+            (active.mode, active.render_ids.clone())
+        };
+        let include_drafts = self.include_drafts(mode);
+        let render_ids: BTreeSet<ContentId> = match site_render_ids {
+            Some(ids) => ids,
+            None => self
+                .active
+                .as_ref()
+                .expect("active build")
+                .site
+                .pages()
+                .iter()
+                .filter(|page| include_drafts || !page.draft)
+                .map(|page| page.id.clone())
+                .collect(),
+        };
 
         let root = self.paths.root.clone();
         let theme_root = self.theme_fs_root();
-        let permalinks = PermalinkPlan::build(&self.graph);
+        let site = &self.active.as_ref().expect("active build").site;
         let jobs: Vec<(ContentId, String, String, String)> = render_ids
             .iter()
-            .filter_map(|id| self.graph.nodes.get(id).map(|n| (id.clone(), n)))
+            .filter_map(|id| self.graph.nodes.get(id).map(|node| (id.clone(), node)))
             .map(|(id, node)| {
-                let page =
-                    render_page(&root, &self.config, theme_root.as_deref(), node, Some(&permalinks))?;
-                Ok((
-                    id,
-                    staging_page_rel(node),
-                    page.html,
-                    page.layout_id,
-                ))
+                let output = site
+                    .page(&node.rel_path)
+                    .map(|page| page.output.clone())
+                    .ok_or_else(|| {
+                        CoreError::build(format!("no site page for `{}`", node.rel_path))
+                    })?;
+                let page = render_page(
+                    &root,
+                    &self.config,
+                    theme_root.as_deref(),
+                    node,
+                    site,
+                    include_drafts,
+                )?;
+                Ok((id, output, page.html, page.layout_id))
             })
             .collect::<CoreResult<Vec<_>>>()?;
 
@@ -851,6 +903,22 @@ mod tests {
     use super::*;
     use std::fs;
 
+    fn advance(session: &mut BuildSession, plan: BuildPlan) -> BuildPlan {
+        let results: Vec<PluginResult> = plan
+            .pending_hooks
+            .iter()
+            .map(|hook| PluginResult {
+                plugin_id: hook.plugin_id.clone(),
+                hook: hook.hook,
+                ok: true,
+                patch: None,
+                diagnostics: vec![],
+                dependencies: vec![],
+            })
+            .collect();
+        session.continue_build(results).unwrap()
+    }
+
     fn write_min_project(dir: &std::path::Path) {
         fs::write(
             dir.join("doki.toml"),
@@ -907,6 +975,15 @@ incremental = true
             .join("dist/pages/secret.html")
             .exists());
         assert!(dir.path().join("dist/pages/hello.html").is_file());
+        let manifest: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(dir.path().join("dist/doki-manifest.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(manifest["content"], json!(["about.md", "hello.md"]));
+        let pages = manifest["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 2);
+        assert!(pages.iter().all(|page| page["draft"] == false));
+        assert!(pages.iter().any(|page| page["relPath"] == "hello.md"));
     }
 
     #[test]
@@ -928,6 +1005,18 @@ incremental = true
         let html = fs::read_to_string(dir.path().join("dist/pages/hello.html")).unwrap();
         assert!(html.contains("<title>Hello</title>") || html.contains("Hello"));
         assert!(html.contains("<h1>Hello</h1>") || html.contains("Hello"));
+        let build_manifest: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(dir.path().join("dist/.doki/build-manifest.json")).unwrap(),
+        )
+        .unwrap();
+        let pages = build_manifest["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0]["id"], "about.md");
+        assert_eq!(pages[1]["id"], "hello.md");
+        assert_eq!(pages[1]["type"], "page");
+        assert_eq!(pages[1]["route"], "/hello/");
+        assert_eq!(pages[1]["output"], "pages/hello.html");
+        assert_eq!(pages[1]["url"], "/pages/hello.html");
     }
 
     #[test]
@@ -1103,6 +1192,129 @@ enabled = false
             .collect();
         let plan = session.continue_build(results).unwrap();
         assert_eq!(plan.phase, BuildPhase::ReadyToCommit);
+    }
+
+    #[test]
+    fn hook_payloads_carry_site_pages_and_site_summary() {
+        let dir = tempfile::tempdir().unwrap();
+        write_min_project(dir.path());
+        fs::create_dir_all(dir.path().join("content/posts")).unwrap();
+        fs::write(
+            dir.path().join("content/index.md"),
+            "---\ntitle: Home\n---\n\nhome\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join("content/posts/2025-08-11-first.md"),
+            "---\ntitle: First post\ndate: 2026-08-11\n---\n\npost\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join("content/secret.md"),
+            "---\ntitle: Secret\ndraft: true\n---\n\nhidden\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join("doki.toml"),
+            r#"
+title = "Session Site"
+content_dir = "content"
+output_dir = "dist"
+incremental = true
+
+[[plugins]]
+path = "./plugins/probe"
+enabled = true
+"#,
+        )
+        .unwrap();
+
+        let mut session =
+            BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+        let plan = session.prepare_build(BuildMode::Development).unwrap();
+        assert_eq!(plan.phase, BuildPhase::ValidateConfig);
+
+        let plan = advance(&mut session, plan);
+        assert_eq!(plan.phase, BuildPhase::TransformContent);
+        let input = &plan.pending_hooks[0].input;
+        assert!(input.get("contentIds").is_none(), "{input}");
+        let pages = input["pages"].as_array().unwrap();
+        assert_eq!(pages.len(), 5, "{input}");
+        let first = pages
+            .iter()
+            .find(|page| page["relPath"] == "posts/2025-08-11-first.md")
+            .unwrap();
+        assert_eq!(first["type"], "post");
+        assert_eq!(first["route"], "/posts/first/");
+        assert_eq!(first["output"], "pages/posts/2025-08-11-first.html");
+        assert_eq!(first["url"], "/pages/posts/2025-08-11-first.html");
+        assert_eq!(first["title"], "First post");
+        assert_eq!(first["date"], "2026-08-11");
+        assert_eq!(first["draft"], false);
+        assert_eq!(first["description"], serde_json::Value::Null);
+        let home = pages
+            .iter()
+            .find(|page| page["relPath"] == "index.md")
+            .unwrap();
+        assert_eq!(home["type"], "home");
+        assert_eq!(home["route"], "/");
+        let draft = pages
+            .iter()
+            .find(|page| page["relPath"] == "secret.md")
+            .unwrap();
+        assert_eq!(draft["draft"], true, "development builds include drafts");
+
+        let plan = advance(&mut session, plan);
+        assert_eq!(plan.phase, BuildPhase::ContributeArtifacts);
+        let input = &plan.pending_hooks[0].input;
+        assert_eq!(input["site"]["title"], "Session Site");
+        assert_eq!(input["site"]["lang"], "en");
+        assert_eq!(input["site"]["postCount"], 1);
+        assert_eq!(input["site"]["baseUrl"], serde_json::Value::Null);
+        assert_eq!(input["pages"].as_array().unwrap().len(), 5);
+        assert!(input.get("contentIds").is_none(), "{input}");
+        let complete = plan
+            .pending_hooks
+            .iter()
+            .find(|hook| hook.hook == HookKind::BuildComplete)
+            .unwrap();
+        assert_eq!(complete.input["readOnly"], true);
+        assert_eq!(complete.input["pages"].as_array().unwrap().len(), 5);
+    }
+
+    #[test]
+    fn prepare_build_fails_on_route_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        write_min_project(dir.path());
+        fs::create_dir_all(dir.path().join("content/posts")).unwrap();
+        fs::write(
+            dir.path().join("content/posts/hello.md"),
+            "---\ntitle: Plain\n---\n\nplain\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.path().join("content/posts/2025-06-15-hello.md"),
+            "---\ntitle: Dated\n---\n\ndated\n",
+        )
+        .unwrap();
+
+        let mut session =
+            BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+        let err = session.prepare_build(BuildMode::Production).unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.contains("doki.site.route-conflict"),
+            "diagnostic code must be in the error: {message}"
+        );
+        assert!(message.contains("posts/hello.md"), "{message}");
+        assert!(message.contains("posts/2025-06-15-hello.md"), "{message}");
+        assert!(message.contains("/posts/hello/"), "{message}");
+        assert!(
+            !dir.path().join("dist/pages/posts/hello.html").exists(),
+            "a conflicted build must not render"
+        );
+        assert!(!dir.path().join("dist/pages/posts/2025-06-15-hello.html").exists());
+        assert!(session.active.is_none());
     }
 
     #[test]

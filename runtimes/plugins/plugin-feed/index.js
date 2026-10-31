@@ -8,28 +8,29 @@ function escapeXml(str) {
         .replace(/"/g, "&quot;");
 }
 
-function pageUrl(baseUrl, id) {
-    const base = (baseUrl || "").replace(/\/$/, "");
-    const slug = String(id).replace(/\.mdx?$/, "");
-    return base ? `${base}/pages/${slug}.html` : `/pages/${slug}.html`;
-}
-
 export default definePlugin({
     id: "@doki-land/doki-plugin-feed",
     capabilities: ["artifacts:feed"],
     hooks: {
         async contributeArtifacts(input) {
-            const title = input?.title || "Site";
-            const baseUrl = (input?.baseUrl || "").replace(/\/$/, "");
-            const pages = Array.isArray(input?.contentIds)
-                ? input.contentIds
-                : [];
+            const site = input?.site || {};
+            const title = site.title || "Site";
+            const baseUrl = (site.baseUrl || "").replace(/\/$/, "");
+            const pages = Array.isArray(input?.pages) ? input.pages : [];
             const updated = new Date().toISOString();
-            const entries = pages
-                .slice(0, 20)
-                .map((id) => {
-                    const link = pageUrl(baseUrl, id);
-                    const name = String(id).replace(/\.mdx?$/, "");
+            const posts = pages
+                .filter((page) => page.type === "post")
+                .sort((a, b) => {
+                    const left = String(a.date || "");
+                    const right = String(b.date || "");
+                    if (left === right) return 0;
+                    return left < right ? 1 : -1;
+                })
+                .slice(0, 20);
+            const entries = posts
+                .map((page) => {
+                    const link = `${baseUrl}${page.url}`;
+                    const name = page.title || page.route;
                     return [
                         "  <entry>",
                         `    <title>${escapeXml(name)}</title>`,

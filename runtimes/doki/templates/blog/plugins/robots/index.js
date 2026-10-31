@@ -2,18 +2,12 @@ function definePlugin(p) {
     return p;
 }
 
-function pageUrl(baseUrl, id) {
-    const base = (baseUrl || "").replace(/\/$/, "");
-    const slug = String(id).replace(/\.mdx?$/, "");
-    return base ? `${base}/pages/${slug}.html` : `/pages/${slug}.html`;
-}
-
 export default definePlugin({
     id: "./plugins/robots",
     capabilities: ["artifacts:robots"],
     hooks: {
         async contributeArtifacts(input) {
-            const baseUrl = (input?.baseUrl || "").replace(/\/$/, "");
+            const baseUrl = (input?.site?.baseUrl || "").replace(/\/$/, "");
             const sitemap = baseUrl ? `${baseUrl}/sitemap.xml` : "/sitemap.xml";
             const body = [
                 "User-agent: *",
@@ -29,5 +23,3 @@ export default definePlugin({
         },
     },
 });
-
-export { pageUrl };

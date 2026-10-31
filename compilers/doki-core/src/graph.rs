@@ -35,6 +35,8 @@ pub struct FrontMatterDto {
     pub title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub page_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -52,6 +54,7 @@ impl From<FrontMatter> for FrontMatterDto {
         Self {
             title: fm.title,
             description: fm.description,
+            page_type: fm.page_type,
             layout: fm.layout,
             date: fm.date,
             draft: fm.draft,
@@ -164,14 +167,4 @@ fn walk_md(dir: &Path, content_root: &Path, graph: &mut ContentGraph) -> CoreRes
         graph.insert(node);
     }
     Ok(())
-}
-
-/// Output-relative HTML path for a content node (`pages/posts/a.html`).
-pub fn staging_page_rel(node: &ContentNode) -> String {
-    let without_ext = node
-        .rel_path
-        .rsplit_once('.')
-        .map(|(stem, _)| stem)
-        .unwrap_or(node.rel_path.as_str());
-    format!("pages/{without_ext}.html")
 }
