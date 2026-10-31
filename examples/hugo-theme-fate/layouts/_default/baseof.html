@@ -9,7 +9,10 @@
   {{ end }}
   <title>{{ $title }}</title>
   {{ with .Description }}<meta name="description" content="{{ . }}">{{ end }}
-  <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+  {{ with resources.Get "css/style.css" }}
+    {{ $css := . | minify | fingerprint }}
+    <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+  {{ end }}
 </head>
 <body>
   {{ partial "nav.html" . }}
