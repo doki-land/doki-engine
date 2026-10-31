@@ -15,11 +15,13 @@ use std::path::{Path, PathBuf};
 use dejavu::{Dejavu, Language, TemplateConfig};
 use notedown_formats::export::html::export_html;
 use notedown_formats::import::markdown::import_markdown_bytes;
+use notedown_ir::{Block, DocumentGraph, Inline, RelationEndpoint};
 use serde_json::{json, Value};
 
 use crate::config::{ExtensionRef, ProjectConfig};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
+use crate::permalink::PermalinkPlan;
 
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
@@ -87,6 +89,10 @@ pub struct RenderedPage {
 /// `theme_root` is the absolute theme directory after Node resolution (`path` or package root).
 /// When `None`, falls back to `config.theme.path` relative to `project_root`, else builtin.
 ///
+/// `permalinks` rewrites corpus-style Markdown link destinations to built page
+/// URLs and exposes `page.permalink` to the layout. When `None`, links stay
+/// verbatim as authored.
+///
 /// Language config is selected from the layout file's extension via [`language_for_ext`],
 /// so `.doki` and `.dejavu` themes can ship side-by-side with their native delimiters.
 pub fn render_page(
@@ -94,8 +100,10 @@ pub fn render_page(
     config: &ProjectConfig,
     theme_root: Option<&Path>,
     node: &ContentNode,
+    permalinks: Option<&PermalinkPlan>,
 ) -> CoreResult<RenderedPage> {
-    let content_html = markdown_to_html(&node.body)?;
+    let content_html =
+        markdown_to_html(&node.body, permalinks.map(|plan| (plan, node.rel_path.as_str())))?;
     let layout_name = node
         .front_matter
         .layout
@@ -121,6 +129,11 @@ pub fn render_page(
         }
         map.insert("draft".into(), Value::Bool(node.front_matter.draft));
         map.insert("relPath".into(), Value::String(node.rel_path.clone()));
+        if let Some(plan) = permalinks {
+            if let Some(permalink) = plan.permalink_for(&node.rel_path) {
+                map.insert("permalink".into(), Value::String(permalink.to_string()));
+            }
+        }
         // Default layouts read `page.lang`; front matter may override per page.
         if !map.contains_key("lang") {
             map.insert("lang".into(), Value::String(config.lang.clone()));
@@ -157,14 +170,78 @@ pub fn render_page(
 /// (`MarkdownImport` / `MarkdownExport`).  Errors are not silently swallowed; the
 /// caller decides how to present the diagnostic.
 ///
+/// When `permalinks` is `Some((plan, from_rel))`, authored `Inline::Link`
+/// destinations that match a content route (`posts/<slug>/`, `about/`,
+/// `/gallery/`, `/`) are rewritten to the built page URL before export;
+/// external and unknown destinations stay verbatim.
+///
 /// Known upstream gaps tracked against Notedown revision `3c01bea`:
 /// `Inline::Citation` and other semantic-only inline nodes still yield
 /// `FormatError::Unsupported` from the conservative HTML exporter.  Task lists
 /// and raw HTML (both block and inline) are wired since `6e899dd`.
-pub fn markdown_to_html(markdown: &str) -> CoreResult<String> {
-    let graph = import_markdown_bytes("inline", markdown)
+pub fn markdown_to_html(
+    markdown: &str,
+    permalinks: Option<(&PermalinkPlan, &str)>,
+) -> CoreResult<String> {
+    let mut graph = import_markdown_bytes("inline", markdown)
         .map_err(|source| CoreError::MarkdownImport { source })?;
+    if let Some((plan, from_rel)) = permalinks {
+        rewrite_document_links(&mut graph, plan, from_rel);
+    }
     export_html(&graph).map_err(|source| CoreError::MarkdownExport { source })
+}
+
+/// Rewrite every `Inline::Link` destination in the imported graph through the
+/// permalink plan. Nested blocks live in the same `blocks` vec, so one flat
+/// pass over all block nodes covers headings, paragraphs, lists, tables and
+/// quotes at any nesting depth.
+fn rewrite_document_links(graph: &mut DocumentGraph, plan: &PermalinkPlan, from_rel: &str) {
+    for node in &mut graph.blocks {
+        match &mut node.block {
+            Block::Section { title, .. } => rewrite_inlines(title, plan, from_rel),
+            Block::Paragraph { content } | Block::Quote { content } => {
+                rewrite_inlines(content, plan, from_rel)
+            }
+            Block::List { items, .. } => {
+                for item in items {
+                    rewrite_inlines(&mut item.content, plan, from_rel);
+                }
+            }
+            Block::Table { rows, .. } => {
+                for row in rows {
+                    for cell in &mut row.cells {
+                        rewrite_inlines(&mut cell.content, plan, from_rel);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn rewrite_inlines(inlines: &mut [Inline], plan: &PermalinkPlan, from_rel: &str) {
+    for inline in inlines.iter_mut() {
+        match inline {
+            Inline::Link { target, display, .. } => {
+                if let RelationEndpoint::ExternalUri(uri) = target {
+                    if let Some(rewritten) = plan.resolve(uri, from_rel) {
+                        *uri = rewritten;
+                    }
+                }
+                rewrite_inlines(display, plan, from_rel);
+            }
+            Inline::Styled { children, .. } | Inline::Attributed { children, .. } => {
+                rewrite_inlines(children, plan, from_rel)
+            }
+            Inline::Image { alt, .. } => rewrite_inlines(alt, plan, from_rel),
+            Inline::Note { display, .. } | Inline::Citation { display, .. } => {
+                if let Some(display) = display {
+                    rewrite_inlines(display, plan, from_rel);
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn resolve_layout(
@@ -245,7 +322,7 @@ mod tests {
             "hello.md",
             "---\ntitle: Hello\n---\n\n# Heading\n\npara\n",
         );
-        let page = render_page(dir.path(), &cfg, None, &node).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, None).unwrap();
         assert!(page.html.contains("<title>Hello</title>"));
         assert!(
             page.html.contains(r#"<html lang="en">"#),
@@ -265,7 +342,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let cfg = ProjectConfig::default();
         let node = node_from_md("fr.md", "---\nlang: fr\n---\n\nbonjour\n");
-        let page = render_page(dir.path(), &cfg, None, &node).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, None).unwrap();
         assert!(
             page.html.contains(r#"<html lang="fr">"#),
             "expected front matter `lang` to win, got: {}",
@@ -292,7 +369,7 @@ mod tests {
             ..ProjectConfig::default()
         };
         let node = node_from_md("p.md", "---\ntitle: T\n---\n\n*x*\n");
-        let page = render_page(dir.path(), &cfg, None, &node).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, None).unwrap();
         assert!(page.html.contains("<wrap>T:"));
         assert!(
             page.html.contains("<em>x</em>"),

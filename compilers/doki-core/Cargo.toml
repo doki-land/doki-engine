@@ -12,6 +12,7 @@ figment = { workspace = true }
 hex = { workspace = true }
 miette = { workspace = true }
 notedown-formats = { workspace = true, features = ["markdown"] }
+notedown-ir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

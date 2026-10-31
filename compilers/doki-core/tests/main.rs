@@ -11,8 +11,8 @@
 use std::path::Path;
 
 use doki_core::{
-    language_for_ext, parse_document, render_page, ContentId, ContentKind, ContentNode,
-    ExtensionRef, FrontMatterDto, ProjectConfig,
+    discover_markdown_content, language_for_ext, parse_document, render_page, ContentId,
+    ContentKind, ContentNode, ExtensionRef, FrontMatterDto, PermalinkPlan, ProjectConfig,
 };
 
 fn node_from_md(rel: &str, source: &str) -> ContentNode {
@@ -78,7 +78,7 @@ fn dj_layout_renders_curly_delimiters_and_keeps_angle_brackets_literal() {
         "<dj>{% title %}|<% literal %></dj>\n",
     );
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, None).unwrap();
     assert!(
         page.html.contains("<dj>T|<% literal %></dj>"),
         "expected curly delimiters parsed and `<% %>` literal, got: {}",
@@ -100,7 +100,7 @@ fn html_layout_renders_default_delimiters_without_doki_fallback() {
         "<html-layout><% title %>|{% not-code %}</html-layout>\n",
     );
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, None).unwrap();
     assert!(
         page.html
             .contains("<html-layout>T|{% not-code %}</html-layout>"),
@@ -117,7 +117,7 @@ fn extensionless_builtin_fallback_uses_the_default_profile() {
         ..ProjectConfig::default()
     };
     let node = node_from_md("b.md", "---\ntitle: B\n---\n\nx\n");
-    let page = render_page(dir.path(), &cfg, None, &node).unwrap();
+    let page = render_page(dir.path(), &cfg, None, &node, None).unwrap();
     assert!(
         page.layout_id.starts_with("builtin:"),
         "expected builtin layout, got: {}",
@@ -145,7 +145,7 @@ fn mixed_catalog_prefers_doki_over_dejavu_and_dj_candidates() {
         "<from-doki>{% title %}</from-doki>\n",
     );
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, None).unwrap();
     assert!(
         page.html.contains("<from-doki>T</from-doki>"),
         "`.doki` should win the candidate order, got: {}",
@@ -162,7 +162,7 @@ fn side_by_side_catalogs_render_each_layout_with_its_own_profile() {
     let cfg = theme_cfg();
 
     let post = node_from_md("a.md", "---\ntitle: A\nlayout: post\n---\n\nx\n");
-    let rendered_post = render_page(dir.path(), &cfg, None, &post).unwrap();
+    let rendered_post = render_page(dir.path(), &cfg, None, &post, None).unwrap();
     assert!(
         rendered_post.html.contains("<p>A</p>"),
         "`.doki` layout should parse `{{% %}}`, got: {}",
@@ -171,7 +171,7 @@ fn side_by_side_catalogs_render_each_layout_with_its_own_profile() {
     assert!(rendered_post.layout_id.ends_with("post.doki"));
 
     let page = node_from_md("b.md", "---\ntitle: B\nlayout: page\n---\n\nx\n");
-    let rendered_page = render_page(dir.path(), &cfg, None, &page).unwrap();
+    let rendered_page = render_page(dir.path(), &cfg, None, &page, None).unwrap();
     assert!(
         rendered_page.html.contains("<q>B</q>"),
         "`.dejavu` layout should parse `<% %>`, got: {}",
@@ -185,7 +185,7 @@ fn broken_doki_layout_failure_names_the_layout_and_page() {
     let dir = tempfile::tempdir().unwrap();
     write_layout(dir.path(), "layout.doki", "<b>{% end if %}oops</b>\n");
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
-    let err = render_page(dir.path(), &theme_cfg(), None, &node)
+    let err = render_page(dir.path(), &theme_cfg(), None, &node, None)
         .expect_err("stray `{% end if %}` must fail the render");
     let msg = err.to_string();
     assert!(
@@ -195,5 +195,82 @@ fn broken_doki_layout_failure_names_the_layout_and_page() {
     assert!(
         msg.contains("p.md"),
         "diagnostic should name the page, got: {msg}"
+    );
+}
+
+#[test]
+fn markdown_links_rewrite_to_built_permalinks() {
+    let dir = tempfile::tempdir().unwrap();
+    let content = dir.path().join("content");
+    std::fs::create_dir_all(content.join("posts")).unwrap();
+    std::fs::write(
+        content.join("index.md"),
+        "---\ntitle: Home\n---\n\n- [Welcome](posts/welcome-to-fate/)\n\
+         - [About](about/)\n- [External](https://example.com/)\n- [Unknown](nope/)\n",
+    )
+    .unwrap();
+    std::fs::write(
+        content.join("about.md"),
+        "---\ntitle: About\n---\n\nback to [home](/)\n",
+    )
+    .unwrap();
+    std::fs::write(
+        content.join("posts/2025-06-15-welcome-to-fate.md"),
+        "---\ntitle: Welcome\n---\n\nsee the [about page](/about/)\n",
+    )
+    .unwrap();
+
+    let graph = discover_markdown_content(dir.path(), "content").unwrap();
+    let plan = PermalinkPlan::build(&graph);
+    let cfg = ProjectConfig {
+        title: "Site".into(),
+        ..ProjectConfig::default()
+    };
+
+    let index = graph.nodes.get(&ContentId("index.md".into())).unwrap();
+    let page = render_page(dir.path(), &cfg, None, index, Some(&plan)).unwrap();
+    assert!(
+        page.html
+            .contains(r#"<a href="/pages/posts/2025-06-15-welcome-to-fate.html">"#),
+        "corpus-style post route should resolve to the built page, got: {}",
+        page.html
+    );
+    assert!(page.html.contains(r#"<a href="/pages/about.html">"#));
+    assert!(page.html.contains(r#"<a href="https://example.com/">"#));
+    assert!(page.html.contains(r#"<a href="nope/">"#), "unknown route stays verbatim");
+    assert!(
+        !page.html.contains("posts/welcome-to-fate/"),
+        "authored route must not survive the rewrite, got: {}",
+        page.html
+    );
+
+    let post = graph
+        .nodes
+        .get(&ContentId("posts/2025-06-15-welcome-to-fate.md".into()))
+        .unwrap();
+    let page = render_page(dir.path(), &cfg, None, post, Some(&plan)).unwrap();
+    assert!(page.html.contains(r#"<a href="/pages/about.html">"#));
+}
+
+#[test]
+fn plan_exposes_page_permalink_to_layout() {
+    let dir = tempfile::tempdir().unwrap();
+    let content = dir.path().join("content");
+    std::fs::create_dir_all(&content).unwrap();
+    std::fs::write(content.join("p.md"), "---\ntitle: P\n---\n\nx\n").unwrap();
+    write_layout(
+        dir.path(),
+        "layout.doki",
+        "<loc>{% page.permalink %}</loc>\n",
+    );
+
+    let graph = discover_markdown_content(dir.path(), "content").unwrap();
+    let plan = PermalinkPlan::build(&graph);
+    let node = graph.nodes.get(&ContentId("p.md".into())).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, node, Some(&plan)).unwrap();
+    assert!(
+        page.html.contains("<loc>/pages/p.html</loc>"),
+        "layout should read `page.permalink`, got: {}",
+        page.html
     );
 }

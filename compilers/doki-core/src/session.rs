@@ -15,6 +15,7 @@ use crate::error::{CoreError, CoreResult};
 use crate::graph::{
     discover_markdown_content, load_markdown_node, staging_page_rel, ContentGraph, ContentId,
 };
+use crate::permalink::PermalinkPlan;
 use crate::protocol::{
     BuildMode, BuildPhase, BuildPlan, BuildResult, ExplainRebuild, ExtensionKind,
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
@@ -653,11 +654,13 @@ impl BuildSession {
 
         let root = self.paths.root.clone();
         let theme_root = self.theme_fs_root();
+        let permalinks = PermalinkPlan::build(&self.graph);
         let jobs: Vec<(ContentId, String, String, String)> = render_ids
             .iter()
             .filter_map(|id| self.graph.nodes.get(id).map(|n| (id.clone(), n)))
             .map(|(id, node)| {
-                let page = render_page(&root, &self.config, theme_root.as_deref(), node)?;
+                let page =
+                    render_page(&root, &self.config, theme_root.as_deref(), node, Some(&permalinks))?;
                 Ok((
                     id,
                     staging_page_rel(node),
@@ -1100,6 +1103,26 @@ enabled = false
             .collect();
         let plan = session.continue_build(results).unwrap();
         assert_eq!(plan.phase, BuildPhase::ReadyToCommit);
+    }
+
+    #[test]
+    fn build_rewrites_content_links_to_output_permalinks() {
+        let dir = tempfile::tempdir().unwrap();
+        write_min_project(dir.path());
+        fs::write(
+            dir.path().join("content/hello.md"),
+            "---\ntitle: Hello\n---\n\nsee [About](about/) and [ext](https://example.com/)\n",
+        )
+        .unwrap();
+        let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+        session.prepare_build(BuildMode::Production).unwrap();
+        session.commit_build().unwrap();
+        let html = fs::read_to_string(dir.path().join("dist/pages/hello.html")).unwrap();
+        assert!(
+            html.contains(r#"<a href="/pages/about.html">"#),
+            "relative content route should resolve to the built page, got: {html}"
+        );
+        assert!(html.contains(r#"<a href="https://example.com/">"#));
     }
 
     #[test]

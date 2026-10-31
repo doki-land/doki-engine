@@ -8,6 +8,7 @@ mod diagnostic;
 mod error;
 mod frontmatter;
 mod graph;
+mod permalink;
 mod protocol;
 mod render;
 mod session;
@@ -29,5 +30,6 @@ pub use protocol::{
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
+pub use permalink::PermalinkPlan;
 pub use render::{language_for_ext, markdown_to_html, render_page, RenderedPage, DEFAULT_LAYOUT};
 pub use session::BuildSession;

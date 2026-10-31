@@ -9,8 +9,8 @@
 <% else if site.description %>
 <meta name="description" content="<% site.description %>"/>
 <% end if %>
-<% if site.baseUrl %>
-<link rel="canonical" href="<% site.baseUrl %>/<% page.relPath %>"/>
+<% if site.baseUrl && page.permalink %>
+<link rel="canonical" href="<% site.baseUrl %><% page.permalink %>"/>
 <% end if %>
 <link rel="stylesheet" href="/assets/style.css"/>
 </head>
