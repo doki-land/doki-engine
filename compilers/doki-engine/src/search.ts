@@ -1,7 +1,7 @@
 /** Doki Engine 搜索索引模块 */
 
 import type { SearchConfig } from "./config.js";
-import type { Content } from "./content.js";
+import type { Content } from "./types.js";
 
 /** 搜索索引条目 */
 export interface SearchIndexEntry {

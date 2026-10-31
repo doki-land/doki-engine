@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SearchConfig } from "../src/config.js";
-import type { Content } from "../src/content.js";
 import {
     createSegmenter,
     extractPlainText,
@@ -9,6 +8,7 @@ import {
     type SearchIndexEntry,
     simpleSegment,
 } from "../src/search.js";
+import type { Content } from "../src/types.js";
 
 describe("SearchIndexBuilder", () => {
     let builder: SearchIndexBuilder;

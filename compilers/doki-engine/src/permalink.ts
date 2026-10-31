@@ -1,7 +1,7 @@
 /** Doki Engine 永久链接模块 */
 
 import type { PermalinkConfig } from "./config.js";
-import type { Content } from "./content.js";
+import type { Content } from "./types.js";
 
 /** 永久链接上下文，用于替换占位符 */
 export interface PermalinkContext {

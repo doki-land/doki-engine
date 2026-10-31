@@ -1,7 +1,7 @@
 /** Doki Engine 分类法系统模块 */
 
 import type { TaxonomyConfig } from "./config.js";
-import type { Content } from "./content.js";
+import type { Content } from "./types.js";
 
 /** 分类项 */
 export interface TaxonomyTerm {

@@ -31,8 +31,6 @@ export default defineConfig({
                 "express",
                 "chokidar",
                 "opn",
-                "marked",
-                "gray-matter",
                 "smol-toml",
             ],
             output: {
@@ -46,8 +44,6 @@ export default defineConfig({
                     express: "Express",
                     chokidar: "Chokidar",
                     opn: "Opn",
-                    marked: "Marked",
-                    "gray-matter": "GrayMatter",
                     "smol-toml": "SmolToml",
                 },
             },

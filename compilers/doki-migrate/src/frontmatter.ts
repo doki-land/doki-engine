@@ -4,8 +4,8 @@
  * 提供各种 frontmatter 格式之间的转换功能。
  */
 
-import matter from "gray-matter";
 import * as TOML from "smol-toml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 /**
  * Frontmatter 格式类型
@@ -27,10 +27,36 @@ export interface ParsedFrontmatter {
  * @returns 解析后的数据和内容
  */
 export function parseYamlFrontmatter(content: string): ParsedFrontmatter {
-    const result = matter(content);
+    const lines = content.trimStart().split(/\r?\n/);
+
+    if (lines[0]?.trim() !== "---") {
+        return {
+            data: {},
+            content: content.trim(),
+        };
+    }
+
+    const closeIndex = lines.findIndex(
+        (line, index) => index > 0 && line.trim() === "---",
+    );
+
+    if (closeIndex === -1) {
+        return {
+            data: {},
+            content: content.trim(),
+        };
+    }
+
+    const parsed = parseYaml(lines.slice(1, closeIndex).join("\n"));
     return {
-        data: result.data as Record<string, unknown>,
-        content: result.content.trim(),
+        data:
+            parsed && typeof parsed === "object"
+                ? (parsed as Record<string, unknown>)
+                : {},
+        content: lines
+            .slice(closeIndex + 1)
+            .join("\n")
+            .trim(),
     };
 }
 
@@ -145,8 +171,9 @@ export function toYamlFrontmatter(
     data: Record<string, unknown>,
     content: string,
 ): string {
-    const yamlStr = matter.stringify("", data).trim();
-    return `${yamlStr}\n\n${content}`;
+    const yamlStr = stringifyYaml(data).trim();
+    const block = yamlStr ? `---\n${yamlStr}\n---` : "---\n---";
+    return `${block}\n\n${content}`;
 }
 
 /**

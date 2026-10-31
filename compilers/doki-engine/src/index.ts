@@ -123,21 +123,6 @@ export {
     type ThemeConfig,
 } from "./config.js";
 
-// 内容模块导出
-export {
-    type CollectOptions,
-    type Content,
-    type ContentCollection,
-    collectContent,
-    copyDir,
-    ensureDir,
-    filterContent,
-    generateOutputPath,
-    getAllContentVariables,
-    processContent,
-    sortByDate,
-} from "./content.js";
-
 // 数据模块导出
 export {
     type DataFileExtension,
@@ -226,16 +211,6 @@ export {
     type TranslationEntry,
     TranslationManager,
 } from "./locales.js";
-// Markdown 模块导出
-export {
-    extractFrontmatter,
-    type Frontmatter,
-    getPageVariables,
-    type MarkdownParseOptions,
-    type MarkdownResult,
-    parseMarkdown,
-    renderMarkdownToHtml,
-} from "./markdown.js";
 // 数学模块导出
 export {
     createMathProcessor,
@@ -372,3 +347,5 @@ export {
     type ThemeManifest,
     themeExists,
 } from "./theme.js";
+// 基础类型导出
+export type { Content, Frontmatter } from "./types.js";

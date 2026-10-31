@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Content } from "../src/content";
 import { DOKI_LANGUAGE, DokiEngine } from "../src/engine";
-import { getPageVariables, parseMarkdown } from "../src/markdown";
 import { getPaginationUrl, paginate } from "../src/pagination";
 import {
     buildTaxonomyPages,
     extractTaxonomies,
     getTaxonomyUrl,
 } from "../src/taxonomy";
+import type { Content } from "../src/types";
 
 describe("Doki Engine Template Syntax", () => {
     let engine: DokiEngine;
@@ -34,51 +33,6 @@ describe("Doki Engine Template Syntax", () => {
             items: ["a", "b", "c"],
         });
         expect(result).toBe("abc");
-    });
-});
-
-describe("Markdown Processing", () => {
-    it("should parse markdown with frontmatter", async () => {
-        const source = `---
-title: "Test Post"
-date: "2024-01-01"
-tags: ["test", "example"]
----
-
-# Hello World
-
-This is a test post.`;
-
-        const result = await parseMarkdown(source);
-        expect(result.frontmatter.title).toBe("Test Post");
-        expect(result.frontmatter.date).toBe("2024-01-01");
-        expect(result.frontmatter.tags).toEqual(["test", "example"]);
-        expect(result.html).toContain("<h1>Hello World</h1>");
-    });
-
-    it("should generate page variables", () => {
-        const frontmatter = {
-            title: "Test",
-            date: "2024-01-01",
-            tags: ["a", "b"],
-        };
-        const html = "<p>Content</p>";
-        const url = "/test/";
-
-        const variables = getPageVariables(frontmatter, html, url);
-        expect(variables.title).toBe("Test");
-        expect(variables.url).toBe("/test/");
-        expect(variables.tags).toEqual(["a", "b"]);
-    });
-
-    it("should handle empty frontmatter", async () => {
-        const source = `# Simple Post
-
-No frontmatter here.`;
-
-        const result = await parseMarkdown(source);
-        expect(result.frontmatter.title).toBeUndefined();
-        expect(result.html).toContain("<h1>Simple Post</h1>");
     });
 });
 

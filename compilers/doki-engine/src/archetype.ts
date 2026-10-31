@@ -3,7 +3,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import matter from "gray-matter";
+import { parseYamlFrontmatter } from "@doki-land/doki-migrate";
 
 /** 内容原型配置 */
 export interface Archetype {
@@ -84,7 +84,7 @@ export class ArchetypeManager {
 
         try {
             const content = await readFile(archetypePath, "utf-8");
-            const { data } = matter(content);
+            const { data } = parseYamlFrontmatter(content);
 
             return {
                 type,

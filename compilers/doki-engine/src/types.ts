@@ -138,3 +138,75 @@ export function objectFrom(obj: Object): Value {
 export function textRange(start: number, end: number): TextRange {
     return { start, end };
 }
+
+/** Frontmatter 元数据 */
+export interface Frontmatter {
+    /** 页面标题 */
+    title?: string;
+    /** 发布日期 */
+    date?: string;
+    /** 页面描述 */
+    description?: string;
+    /** 布局模板名称 */
+    layout?: string;
+    /** 是否为草稿 */
+    draft?: boolean;
+    /** 标签列表 */
+    tags?: string[];
+    /** 分类名称 */
+    category?: string;
+    /** 系列名称 */
+    series?: string;
+    /** 系列中的顺序 */
+    series_order?: number;
+    /** 作者名称 */
+    author?: string;
+    /** 章节名称（文档用） */
+    section?: string;
+    /** 版本号（文档用） */
+    version?: string;
+    /** 语言标识（文档用） */
+    language?: string;
+    /** 更新日期 */
+    updated?: string;
+    /** 排序权重 */
+    weight?: number;
+    /** 特色图片 URL（用于 OG 标签） */
+    image?: string;
+    /** 内容语言 */
+    lang?: string;
+    /** 翻译键 */
+    translationKey?: string;
+    /** 自定义永久链接 */
+    permalink?: string;
+    /** 别名路径列表（用于重定向） */
+    aliases?: string[];
+    /** 其他自定义字段 */
+    [key: string]: unknown;
+}
+
+/** 内容项 */
+export interface Content {
+    /** 源文件路径 */
+    sourcePath: string;
+    /** 相对路径（相对于内容目录） */
+    relativePath: string;
+    /** 输出 URL 路径 */
+    url: string;
+    /** Frontmatter 元数据 */
+    frontmatter: Frontmatter;
+    /** 原始 Markdown 内容 */
+    rawContent: string;
+    /** 渲染后的 HTML */
+    html: string;
+    /** 页面变量（用于模板） */
+    variables: Record<string, unknown>;
+    /** 语言代码 */
+    lang: string;
+    /** 内容基础名称（不含语言后缀） */
+    baseName: string;
+    /** 是否为默认语言 */
+    isDefaultLang: boolean;
+    /** 翻译关联（其他语言版本的路径） */
+    translations?: Map<string, string>;
+}
