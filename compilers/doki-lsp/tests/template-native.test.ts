@@ -1,22 +1,16 @@
-import { DejavuLanguage } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import {
     analyzeTemplateSource,
     classifyCodeHead,
     collectStructuralDiagnostics,
+    DOKI_LANGUAGE,
     detectCursorContext,
     languageDelimiters,
     scanTemplateRegions,
 } from "../src/template/index";
 
-/** Doki theme delimiters — same Language.template as engine DOKI_LANGUAGE. */
-const dokiLanguage = new DejavuLanguage().withTemplate({
-    codeStart: "{%",
-    codeEnd: "%}",
-    commentStart: "{#",
-    commentEnd: "#}",
-});
-const doki = languageDelimiters(dokiLanguage);
+/** Doki theme delimiters — same TemplateLanguage as engine DOKI_LANGUAGE. */
+const doki = languageDelimiters(DOKI_LANGUAGE);
 
 describe("template IR adapters (not AST walk)", () => {
     it("splits markup and code regions for cursor UX offsets only", () => {
@@ -38,7 +32,7 @@ describe("template IR adapters (not AST walk)", () => {
 
     it("builds template facts via parseToIr, not Program.body", () => {
         const src = `{% extends "base.html" %}{% block content %}x{% end block %}`;
-        const node = analyzeTemplateSource("child.html", src, dokiLanguage);
+        const node = analyzeTemplateSource("child.html", src, DOKI_LANGUAGE);
         expect(node.extendsPath).toBe("base.html");
         expect(node.blocks.has("content")).toBe(true);
     });
@@ -46,14 +40,14 @@ describe("template IR adapters (not AST walk)", () => {
     it("detects filter pipe cursor context (|> contract)", () => {
         const src = "{% name |> %}";
         const offset = src.indexOf("|>") + 3;
-        const ctx = detectCursorContext(src, offset, doki, dokiLanguage);
+        const ctx = detectCursorContext(src, offset, doki, DOKI_LANGUAGE);
         expect(ctx.kind).toBe("filter_pipe");
     });
 
     it("reports parse failures from parseToIr (engine check path)", () => {
         const diags = collectStructuralDiagnostics(
             "{% if x %}hello",
-            dokiLanguage,
+            DOKI_LANGUAGE,
         );
         expect(diags.some((d) => d.code === "parse_error")).toBe(true);
     });

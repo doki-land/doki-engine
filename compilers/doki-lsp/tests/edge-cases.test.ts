@@ -1,20 +1,17 @@
-import { DejavuLanguage, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { DOKI_LANGUAGE, parseTemplate } from "../src/template/index";
 
 describe("Edge Cases Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     function _createDocument(
         content: string,
         uri = "test://test.doki",
     ): TextDocument {
         return TextDocument.create(uri, "doki", 0, content);
+    }
+
+    function parse(source: string) {
+        return parseTemplate(source, DOKI_LANGUAGE);
     }
 
     describe("Large Document Handling", () => {
@@ -39,9 +36,8 @@ describe("Edge Cases Tests", () => {
                 largeContent += `{% end if %}\n`;
             }
 
-            const parser = new Parser(largeContent, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast).toBeDefined();
+            const doc = parse(largeContent);
+            expect(doc).toBeDefined();
         });
     });
 
@@ -69,9 +65,8 @@ describe("Edge Cases Tests", () => {
 {% end block %}
 `;
 
-            const parser = new Parser(nestedContent, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast).toBeDefined();
+            const doc = parse(nestedContent);
+            expect(doc).toBeDefined();
         });
 
         it("should handle complex expressions", () => {
@@ -82,9 +77,8 @@ describe("Edge Cases Tests", () => {
 {% items |> join %}
 `;
 
-            const parser = new Parser(complexExpressions, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast).toBeDefined();
+            const doc = parse(complexExpressions);
+            expect(doc).toBeDefined();
         });
     });
 
@@ -98,8 +92,7 @@ describe("Edge Cases Tests", () => {
 {% end block %}
 `;
 
-            const parser = new Parser(brokenContent, dokiLanguage);
-            expect(() => parser.parse()).toThrow();
+            expect(() => parse(brokenContent)).toThrow();
         });
 
         it("should throw on syntax errors", () => {
@@ -109,8 +102,7 @@ describe("Edge Cases Tests", () => {
 {% end if %}
 `;
 
-            const parser = new Parser(syntaxErrorContent, dokiLanguage);
-            expect(() => parser.parse()).toThrow();
+            expect(() => parse(syntaxErrorContent)).toThrow();
         });
     });
 
@@ -124,9 +116,8 @@ describe("Edge Cases Tests", () => {
 {% end block %}
 `;
 
-            const parser = new Parser(circularContent, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast).toBeDefined();
+            const doc = parse(circularContent);
+            expect(doc).toBeDefined();
         });
 
         it("should handle multiple block overrides", () => {
@@ -146,9 +137,8 @@ describe("Edge Cases Tests", () => {
 {% end block %}
 `;
 
-            const parser = new Parser(multipleBlocks, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast).toBeDefined();
+            const doc = parse(multipleBlocks);
+            expect(doc).toBeDefined();
         });
     });
 
@@ -166,11 +156,10 @@ describe("Edge Cases Tests", () => {
             variablesContent += "</div>";
 
             const startTime = Date.now();
-            const parser = new Parser(variablesContent, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(variablesContent);
             const endTime = Date.now();
 
-            expect(ast).toBeDefined();
+            expect(doc).toBeDefined();
             expect(endTime - startTime).toBeLessThan(5000);
         });
 
@@ -181,11 +170,10 @@ describe("Edge Cases Tests", () => {
             }
 
             const startTime = Date.now();
-            const parser = new Parser(functionsContent, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(functionsContent);
             const endTime = Date.now();
 
-            expect(ast).toBeDefined();
+            expect(doc).toBeDefined();
             expect(endTime - startTime).toBeLessThan(3000);
         });
     });

@@ -1,68 +1,63 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
+import {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
 
-const dejavuLanguage = new DejavuLanguage().withTemplate({
-    codeStart: "<%",
-    codeEnd: "%>",
-    commentStart: "<#",
-    commentEnd: "#>",
-});
+function parse(source: string, language = DEFAULT_LANGUAGE) {
+    return parseTemplate(source, language);
+}
 
-const dokiLanguage = new DejavuLanguage().withTemplate({
-    codeStart: "{%",
-    codeEnd: "%}",
-    commentStart: "{#",
-    commentEnd: "#}",
-});
-
-function parse(source: string, language = dejavuLanguage) {
-    return new Parser(source, language).parse();
+function children(doc: { body: IrNode }): IrNode[] {
+    return doc.body.type === "Template" ? doc.body.children : [];
 }
 
 describe("Doki LSP Parser Integration", () => {
     describe("Expressions", () => {
         it("should parse binary expressions", () => {
-            const ast = parse("Result: <% 1 + 2 %>");
-            expect(ast.type).toBe(NodeType.Program);
-            const expr = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
+            const doc = parse("Result: <% 1 + 2 %>");
+            expect(doc.body.type).toBe("Template");
+            const expr = children(doc).find((n) => n.type === "Interpolation");
             expect(expr).toBeDefined();
-            expect((expr as any).expression.type).toBe(
-                NodeType.BinaryExpression,
-            );
+            expect(
+                expr &&
+                    expr.type === "Interpolation" &&
+                    expr.expression.type,
+            ).toBe("Expr.Binary");
         });
 
         it("should parse function calls", () => {
-            const ast = parse("Result: <% foo(1, 2) %>");
-            expect(ast.type).toBe(NodeType.Program);
-            const expr = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
-            expect((expr as any).expression.type).toBe(NodeType.CallExpression);
+            const doc = parse("Result: <% foo(1, 2) %>");
+            expect(doc.body.type).toBe("Template");
+            const expr = children(doc).find((n) => n.type === "Interpolation");
+            expect(
+                expr &&
+                    expr.type === "Interpolation" &&
+                    expr.expression.type,
+            ).toBe("Expr.Call");
         });
 
         it("should parse filter pipes", () => {
-            const ast = parse("<% name |> upper %>");
-            const expr = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            ) as any;
-            expect(expr.expression.type).toBe(NodeType.PipeExpression);
-            expect(expr.expression.filter.name).toBe("upper");
+            const doc = parse("<% name |> upper %>");
+            const expr = children(doc).find(
+                (n) => n.type === "Interpolation",
+            ) as Extract<IrNode, { type: "Interpolation" }>;
+            expect(expr.expression.type).toBe("Expr.Pipe");
+            expect(
+                expr.expression.type === "Expr.Pipe" && expr.expression.filter,
+            ).toBe("upper");
         });
     });
 
     describe("Mixed Content", () => {
         it("should parse template with text and code", () => {
-            const ast = parse("Hello <% name %>!");
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.some((n: any) => n.type === NodeType.Text)).toBe(
-                true,
-            );
+            const doc = parse("Hello <% name %>!");
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).some((n) => n.type === "Text")).toBe(true);
             expect(
-                ast.body.some(
-                    (n: any) => n.type === NodeType.ExpressionStatement,
-                ),
+                children(doc).some((n) => n.type === "Interpolation"),
             ).toBe(true);
         });
     });
@@ -76,10 +71,10 @@ describe("Control Flow Parsing", () => {
 Positive
 <% end if %>
 `;
-            const ast = parse(source);
-            expect(ast.type).toBe(NodeType.Program);
+            const doc = parse(source);
+            expect(doc.body.type).toBe("Template");
             expect(
-                ast.body.some((n: any) => n.type === NodeType.IfStatement),
+                children(doc).some((n) => n.type === "Stmt.If"),
             ).toBe(true);
         });
 
@@ -91,10 +86,10 @@ Positive
 Non-positive
 <% end if %>
 `;
-            const ast = parse(source);
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            ) as any;
+            const doc = parse(source);
+            const ifStmt = children(doc).find(
+                (n) => n.type === "Stmt.If",
+            ) as Extract<IrNode, { type: "Stmt.If" }>;
             expect(ifStmt).toBeDefined();
             expect(ifStmt.alternate).toBeDefined();
         });
@@ -109,11 +104,11 @@ Negative
 Zero
 <% end if %>
 `;
-            const ast = parse(source);
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            ) as any;
-            expect(ifStmt.elseIfs?.length).toBeGreaterThanOrEqual(1);
+            const doc = parse(source);
+            const ifStmt = children(doc).find(
+                (n) => n.type === "Stmt.If",
+            ) as Extract<IrNode, { type: "Stmt.If" }>;
+            expect(ifStmt.elseIfs.length).toBeGreaterThanOrEqual(1);
             expect(ifStmt.alternate).toBeDefined();
         });
     });
@@ -125,13 +120,12 @@ Zero
 Item: <% item %>
 <% end loop %>
 `;
-            const ast = parse(source);
-            const forIn = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            ) as any;
-            expect(forIn).toBeDefined();
-            expect(forIn.item).toBe("item");
-            expect(forIn.left.name).toBe("item");
+            const doc = parse(source);
+            const forStmt = children(doc).find(
+                (n) => n.type === "Stmt.For",
+            ) as Extract<IrNode, { type: "Stmt.For" }>;
+            expect(forStmt).toBeDefined();
+            expect(forStmt.item).toBe("item");
         });
     });
 });
@@ -139,33 +133,31 @@ Item: <% item %>
 describe("Comments", () => {
     it("should parse comments", () => {
         const source = `Hello <# This is a comment #> World`;
-        const ast = parse(source);
-        expect(ast.type).toBe(NodeType.Program);
-        expect(ast.body.some((n: any) => n.type === NodeType.Comment)).toBe(
-            true,
-        );
+        const doc = parse(source);
+        expect(doc.body.type).toBe("Template");
+        expect(children(doc).some((n) => n.type === "Comment")).toBe(true);
     });
 });
 
-describe("DejavuLanguage Configuration", () => {
+describe("TemplateLanguage Configuration", () => {
     it("should create doki language with correct delimiters", () => {
-        expect(dokiLanguage.template.codeStart).toBe("{%");
-        expect(dokiLanguage.template.codeEnd).toBe("%}");
+        expect(DOKI_LANGUAGE.template.codeStart).toBe("{%");
+        expect(DOKI_LANGUAGE.template.codeEnd).toBe("%}");
     });
 
     it("should create dejavu language with correct delimiters", () => {
-        expect(dejavuLanguage.template.codeStart).toBe("<%");
-        expect(dejavuLanguage.template.codeEnd).toBe("%>");
+        expect(DEFAULT_LANGUAGE.template.codeStart).toBe("<%");
+        expect(DEFAULT_LANGUAGE.template.codeEnd).toBe("%>");
     });
 });
 
 describe("Parser Direct Usage", () => {
     it("should parse with custom language config", () => {
         const source = "{% name %}";
-        const ast = parse(source, dokiLanguage);
-        expect(ast.type).toBe(NodeType.Program);
+        const doc = parse(source, DOKI_LANGUAGE);
+        expect(doc.body.type).toBe("Template");
         expect(
-            ast.body.some((n: any) => n.type === NodeType.ExpressionStatement),
+            children(doc).some((n) => n.type === "Interpolation"),
         ).toBe(true);
     });
 

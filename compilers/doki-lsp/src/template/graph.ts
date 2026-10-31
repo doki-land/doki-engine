@@ -8,8 +8,12 @@
  * Do not invent a second extends/block ruleset from delimiter scans.
  */
 
-import type { Language } from "@doki-land/dejavu-engine";
-import { extractTemplateFacts, type IrTemplateFacts, tryParseToIr } from "./ir";
+import {
+    extractTemplateFacts,
+    type IrTemplateFacts,
+    tryParseToIr,
+    type TemplateLanguage,
+} from "./ir";
 
 export type BlockDef = {
     name: string;
@@ -51,7 +55,7 @@ function factsToNode(path: string, facts: IrTemplateFacts): TemplateNode {
 export function analyzeTemplateSource(
     path: string,
     source: string,
-    language?: Language | { asLanguage(): Language },
+    language?: TemplateLanguage,
 ): TemplateNode {
     const parsed = tryParseToIr(source, language, path);
     if (!parsed.ok) {
@@ -69,7 +73,7 @@ export function buildParentChain(
     startPath: string,
     load: (path: string) => string | null,
     resolve: (from: string, rel: string) => string,
-    language?: Language | { asLanguage(): Language },
+    language?: TemplateLanguage,
 ): string[] {
     const chain: string[] = [];
     const seen = new Set<string>();

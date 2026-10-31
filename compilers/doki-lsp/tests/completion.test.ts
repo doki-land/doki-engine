@@ -1,22 +1,13 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
 
 describe("Completion Provider Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    const dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
     function _createDocument(
         content: string,
         uri = "test://test.doki",
@@ -112,22 +103,13 @@ describe("Completion Provider Tests", () => {
 
     describe("Keyword Completions", () => {
         const keywords = [
-            "let",
             "if",
             "else",
             "loop",
-            "break",
-            "continue",
-            "micro",
-            "namespace",
-            "using",
-            "match",
-            "case",
             "end",
             "extends",
+            "include",
             "block",
-            "prepend",
-            "append",
             "super",
             "true",
             "false",
@@ -135,18 +117,14 @@ describe("Completion Provider Tests", () => {
         ];
 
         it("should have all essential keywords", () => {
-            expect(keywords).toContain("let");
             expect(keywords).toContain("if");
             expect(keywords).toContain("loop");
-            expect(keywords).toContain("micro");
-            expect(keywords).toContain("match");
         });
 
         it("should have template inheritance keywords", () => {
             expect(keywords).toContain("extends");
+            expect(keywords).toContain("include");
             expect(keywords).toContain("block");
-            expect(keywords).toContain("prepend");
-            expect(keywords).toContain("append");
             expect(keywords).toContain("super");
         });
 
@@ -340,66 +318,49 @@ describe("Completion Provider Tests", () => {
     describe("Snippet Completions", () => {
         const snippets = [
             "extends",
+            "include",
             "block",
-            "prepend",
-            "append",
             "super",
             "if",
             "ifelse",
             "loop",
-            "loopi",
-            "match",
-            "while",
-            "let",
-            "micro",
-            "namespace",
-            "using",
             "filter",
-            "range",
         ];
 
         it("should have control flow snippets", () => {
             expect(snippets).toContain("if");
             expect(snippets).toContain("ifelse");
             expect(snippets).toContain("loop");
-            expect(snippets).toContain("match");
-            expect(snippets).toContain("while");
         });
 
         it("should have template inheritance snippets", () => {
             expect(snippets).toContain("extends");
+            expect(snippets).toContain("include");
             expect(snippets).toContain("block");
-            expect(snippets).toContain("prepend");
-            expect(snippets).toContain("append");
             expect(snippets).toContain("super");
-        });
-
-        it("should have declaration snippets", () => {
-            expect(snippets).toContain("let");
-            expect(snippets).toContain("micro");
-            expect(snippets).toContain("namespace");
-            expect(snippets).toContain("using");
         });
     });
 
     describe("Language Support", () => {
+        function children(doc: { body: IrNode }): IrNode[] {
+            return doc.body.type === "Template" ? doc.body.children : [];
+        }
+
         it("should parse doki syntax", () => {
             const content = "{% if show %}yes{% end if %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
+            expect(doc.body.type).toBe("Template");
             expect(
-                ast.body.some((n: any) => n.type === NodeType.IfStatement),
+                children(doc).some((n) => n.type === "Stmt.If"),
             ).toBe(true);
         });
 
         it("should parse dejavu syntax", () => {
             const content = "<% if show %>yes<% end if %>";
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            const doc = parseTemplate(content, DEFAULT_LANGUAGE);
+            expect(doc.body.type).toBe("Template");
             expect(
-                ast.body.some((n: any) => n.type === NodeType.IfStatement),
+                children(doc).some((n) => n.type === "Stmt.If"),
             ).toBe(true);
         });
     });

@@ -2,20 +2,147 @@
  * Engine-backed IR helpers for doki-lsp.
  *
  * Single language contract / single execution path with Dejavu:
- *   source → parseToIr (same parser as runtime) → IrDocument / IrNode
- * Inheritance facts must match renderIr + TemplateLoader resolution — not a fork.
+ *   source → parse (@doki-land/dejavu, `dejavu.napi/0`) → IrDocument / IrNode
+ * Inheritance facts must match renderIr + catalog resolution — not a fork.
  *
  * Forbidden: Program.body / NodeType DFS, and any parallel delimiter "mini-engine"
- * that invents control / inheritance semantics outside @doki-land/dejavu-engine.
+ * that invents control / inheritance semantics outside @doki-land/dejavu.
  */
 
-import {
-    DEFAULT_LANGUAGE,
-    type IrDocument,
-    type IrNode,
-    type Language,
-    parseToIr,
-} from "@doki-land/dejavu-engine";
+import { parse } from "@doki-land/dejavu";
+
+/** Language + delimiter configuration — the `dejavu.napi/0` `delimiters` wire
+ * (camelCase, matching the Rust `dejavu_ir::Language`). */
+export type TemplateLanguage = {
+    syntaxMode: "template";
+    template: {
+        codeStart: string;
+        codeEnd: string;
+        commentStart: string;
+        commentEnd: string;
+        supportFilterPipe: boolean;
+        legacyFor: boolean;
+    };
+};
+
+/** Dejavu default profile (`<% %>` / `<# #>`). */
+export const DEFAULT_LANGUAGE: TemplateLanguage = {
+    syntaxMode: "template",
+    template: {
+        codeStart: "<%",
+        codeEnd: "%>",
+        commentStart: "<#",
+        commentEnd: "#>",
+        supportFilterPipe: true,
+        legacyFor: false,
+    },
+};
+
+/** Doki profile (`{% %}` / `{# #}`). */
+export const DOKI_LANGUAGE: TemplateLanguage = {
+    syntaxMode: "template",
+    template: {
+        codeStart: "{%",
+        codeEnd: "%}",
+        commentStart: "{#",
+        commentEnd: "#}",
+        supportFilterPipe: true,
+        legacyFor: false,
+    },
+};
+
+/** UTF-8 byte span, `end` exclusive (engine contract). */
+export type IrSpan = { start: number; end: number };
+
+export type IrElseIf = {
+    type: "Stmt.ElseIf";
+    test: IrNode;
+    consequent: IrNode[];
+    trim?: string;
+    span?: IrSpan;
+};
+
+/** IR node vocabulary emitted by `@doki-land/dejavu` `parse` (irVersion 1.0). */
+export type IrNode =
+    | { type: "Template"; children: IrNode[]; span?: IrSpan }
+    | { type: "Text"; value: string; span?: IrSpan }
+    | { type: "Comment"; value: string; span?: IrSpan }
+    | {
+          type: "Interpolation";
+          expression: IrNode;
+          trim?: string;
+          span?: IrSpan;
+      }
+    | {
+          type: "Stmt.If";
+          test: IrNode;
+          consequent: IrNode[];
+          elseIfs: IrElseIf[];
+          alternate?: IrNode[];
+          trim?: string;
+          span?: IrSpan;
+      }
+    | IrElseIf
+    | {
+          type: "Stmt.For";
+          item: string;
+          index?: string;
+          iterable: IrNode;
+          body: IrNode[];
+          trim?: string;
+          span?: IrSpan;
+      }
+    | {
+          type: "Stmt.Block";
+          name: string;
+          body: IrNode[];
+          trim?: string;
+          span?: IrSpan;
+      }
+    | { type: "Stmt.Extends"; parent: IrNode; trim?: string; span?: IrSpan }
+    | { type: "Stmt.Include"; path: IrNode; trim?: string; span?: IrSpan }
+    | { type: "Stmt.Super"; trim?: string; span?: IrSpan }
+    | { type: "Expr.Identifier"; name: string; span?: IrSpan }
+    | { type: "Expr.Literal"; value: unknown; span?: IrSpan }
+    | {
+          type: "Expr.Binary";
+          operator: string;
+          left: IrNode;
+          right: IrNode;
+          span?: IrSpan;
+      }
+    | {
+          type: "Expr.Unary";
+          operator: string;
+          argument: IrNode;
+          span?: IrSpan;
+      }
+    | {
+          type: "Expr.Member";
+          object: IrNode;
+          property: string;
+          span?: IrSpan;
+      }
+    | { type: "Expr.Index"; object: IrNode; index: IrNode; span?: IrSpan }
+    | {
+          type: "Expr.Call";
+          callee: IrNode;
+          arguments: IrNode[];
+          span?: IrSpan;
+      }
+    | {
+          type: "Expr.Pipe";
+          expression: IrNode;
+          filter: string;
+          arguments: IrNode[];
+          span?: IrSpan;
+      };
+
+export type IrDocument = {
+    irVersion: string;
+    language: TemplateLanguage;
+    body: IrNode;
+};
 
 export type IrParseOk = { ok: true; doc: IrDocument };
 export type IrParseErr = { ok: false; message: string };
@@ -35,27 +162,27 @@ export type IrTemplateFacts = {
     loopItems: Array<{ name: string; start: number; end: number }>;
 };
 
-function asLanguage(
-    language?: Language | { asLanguage(): Language },
-): Language {
-    if (!language) return DEFAULT_LANGUAGE;
-    if (
-        typeof (language as { asLanguage?: () => Language }).asLanguage ===
-        "function"
-    ) {
-        return (language as { asLanguage(): Language }).asLanguage();
-    }
-    return language as Language;
+/** Normative parse — same entry as runtime / checkTemplate. Throws on
+ * error-severity diagnostics (`DejavuError`). */
+export function parseTemplate(
+    source: string,
+    language: TemplateLanguage = DEFAULT_LANGUAGE,
+    file = "template.dejavu",
+): IrDocument {
+    return parse(source, {
+        file,
+        delimiters: JSON.stringify(language),
+    }) as IrDocument;
 }
 
-/** Normative parse — same entry as runtime / checkTemplate. */
+/** Non-throwing wrapper of {@link parseTemplate}. */
 export function tryParseToIr(
     source: string,
-    language?: Language | { asLanguage(): Language },
+    language?: TemplateLanguage,
     file = "template.dejavu",
 ): IrParseResult {
     try {
-        const doc = parseToIr(source, { file, language: asLanguage(language) });
+        const doc = parseTemplate(source, language ?? DEFAULT_LANGUAGE, file);
         return { ok: true, doc };
     } catch (e) {
         return {
@@ -175,15 +302,13 @@ export function extractTemplateFacts(doc: IrDocument): IrTemplateFacts {
 }
 
 /** Engine language template delimiters (canonical config — not LSP-invented). */
-export function languageDelimiters(
-    language?: Language | { asLanguage(): Language },
-): {
+export function languageDelimiters(language?: TemplateLanguage): {
     codeStart: string;
     codeEnd: string;
     commentStart: string;
     commentEnd: string;
 } {
-    const t = asLanguage(language).template;
+    const t = (language ?? DEFAULT_LANGUAGE).template;
     return {
         codeStart: t.codeStart,
         codeEnd: t.codeEnd,

@@ -14,7 +14,6 @@
  * offset UX only — never a second semantic model.
  */
 
-import { DejavuLanguage, type IrDocument } from "@doki-land/dejavu-engine";
 import {
     type CodeAction,
     type CodeActionContext,
@@ -55,8 +54,12 @@ import {
     analyzeTemplateSource,
     buildParentChain,
     collectStructuralDiagnostics,
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
     detectCursorContext,
     extractTemplateFacts,
+    type IrDocument,
+    type TemplateLanguage,
     tryParseToIr,
     walkIr,
 } from "./template/index";
@@ -2621,13 +2624,6 @@ class ConfigManager {
     }
 
     /**
-     * 设置 LSP 连接
-     */
-    public setConnection(conn: ReturnType<typeof createConnection>): void {
-        this.connection = conn;
-    }
-
-    /**
      * 获取当前配置
      */
     public getConfig(): DokiConfig {
@@ -2801,36 +2797,24 @@ interface LanguageConfig {
 class LanguageConfigManager {
     private static instance: LanguageConfigManager;
     private configs: Map<string, LanguageConfig> = new Map();
-    private languages: Map<string, DejavuLanguage> = new Map();
+    private languages: Map<string, TemplateLanguage> = new Map();
 
     private constructor() {
-        const dokiLanguage = new DejavuLanguage().withTemplate({
-            codeStart: "{%",
-            codeEnd: "%}",
-            commentStart: "{#",
-            commentEnd: "#}",
-        });
         this.configs.set("doki", {
             codeStart: "{%",
             codeEnd: "%}",
             commentStart: "{#",
             commentEnd: "#}",
         });
-        this.languages.set("doki", dokiLanguage);
+        this.languages.set("doki", DOKI_LANGUAGE);
 
-        const dejavuLanguage = new DejavuLanguage().withTemplate({
-            codeStart: "<%",
-            codeEnd: "%>",
-            commentStart: "<#",
-            commentEnd: "#>",
-        });
         this.configs.set("dejavu", {
             codeStart: "<%",
             codeEnd: "%>",
             commentStart: "<#",
             commentEnd: "#>",
         });
-        this.languages.set("dejavu", dejavuLanguage);
+        this.languages.set("dejavu", DEFAULT_LANGUAGE);
     }
 
     public static getInstance(): LanguageConfigManager {
@@ -2849,9 +2833,9 @@ class LanguageConfigManager {
     }
 
     /**
-     * 获取 DejavuLanguage 实例
+     * 获取 TemplateLanguage 配置（`dejavu.napi/0` delimiters wire）
      */
-    public getDejavuLanguage(uri: string): DejavuLanguage {
+    public getDejavuLanguage(uri: string): TemplateLanguage {
         const extension = this.getExtension(uri);
         const lang = this.languages.get(extension);
         return lang || this.languages.get("doki")!;
@@ -2909,7 +2893,7 @@ class ParserService {
      */
     public parseDocument(
         document: TextDocument,
-        language: DejavuLanguage,
+        language: TemplateLanguage,
     ): ParseResult {
         const content = document.getText();
         const errors: ParseError[] = [];
@@ -6671,8 +6655,6 @@ const renameProvider = new RenameProvider();
 const semanticTokensProvider = new SemanticTokensProvider();
 const formattingProvider = new FormattingProvider();
 const codeActionProvider = new CodeActionProvider();
-
-configManager.setConnection(connection);
 
 connection.onInitialize((_params: InitializeParams): InitializeResult => {
     return {

@@ -20,7 +20,7 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
-        "@doki-land/dejavu-engine": "0.0.0",
+        "@doki-land/dejavu": "0.0.17",
         "vscode-languageserver": "^9.0.0",
         "vscode-languageserver-textdocument": "^1.0.0"
     },

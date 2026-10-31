@@ -34,12 +34,20 @@ export {
     classifyCodeHead,
 } from "./heads";
 export {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
     extractTemplateFacts,
     type IrBlockFact,
+    type IrDocument,
+    type IrElseIf,
+    type IrNode,
     type IrParseResult,
+    type IrSpan,
     type IrTemplateFacts,
     languageDelimiters,
+    parseTemplate,
     tryParseToIr,
+    type TemplateLanguage,
     walkIr,
 } from "./ir";
 export {

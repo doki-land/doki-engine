@@ -32,7 +32,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0(vitest@0.34.6))(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
 
   compilers/doki-engine:
     dependencies:
@@ -126,13 +126,13 @@ importers:
         version: 5.4.21(@types/node@25.5.0)(sass@1.98.0)(terser@5.46.1)
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0(vitest@0.34.6))(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
 
   compilers/doki-lsp:
     dependencies:
-      '@doki-land/dejavu-engine':
-        specifier: 0.0.0
-        version: 0.0.0
+      '@doki-land/dejavu':
+        specifier: 0.0.17
+        version: 0.0.17
       vscode-languageserver:
         specifier: ^9.0.0
         version: 9.0.1
@@ -151,7 +151,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0(vitest@0.34.6))(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
 
   compilers/doki-migrate:
     dependencies:
@@ -179,13 +179,13 @@ importers:
         version: 4.5.4(@types/node@25.5.0)(rollup@4.59.0)(typescript@5.9.3)(vite@5.4.21(@types/node@25.5.0)(sass@1.98.0)(terser@5.46.1))
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0(vitest@0.34.6))(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
 
   compilers/doki-node:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0
-        version: 3.10.9(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.0)
+        version: 3.10.9(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@25.5.0)
     optionalDependencies:
       '@doki-land/doki-darwin-arm64':
         specifier: 0.0.0
@@ -568,10 +568,6 @@ packages:
     resolution: {integrity: sha512-DXli3irqU+f3g4T1jDpa4eZFR/lW1hL4P2TKHmEju+5FPJVZuPqJHHLzA6LLnIXZxhVvubNbi3ZcOkxdGUz0eQ==}
     cpu: [x64]
     os: [darwin]
-
-  '@doki-land/dejavu-engine@0.0.0':
-    resolution: {integrity: sha512-+m2BuF4FcPVn7yd606sDntMJLp2qYHUQwdmiyyqZKkrxvlH1PLX1LnMtqgMCOMz71cauNLjArUMQis5VUOOK8w==}
-    hasBin: true
 
   '@doki-land/dejavu-engine@0.0.17':
     resolution: {integrity: sha512-IhLXw0SENxu0+M+njIjLnZ1zv5FMW7N+U1zjSVhrTMS2Am1pq2YJ0FF3obxJXZoHXpUXWs5HwdGf53WtZzqvlA==}
@@ -5063,8 +5059,6 @@ snapshots:
   '@doki-land/dejavu-darwin-x64@0.0.17':
     optional: true
 
-  '@doki-land/dejavu-engine@0.0.0': {}
-
   '@doki-land/dejavu-engine@0.0.17': {}
 
   '@doki-land/dejavu-linux-arm64@0.0.17':
@@ -5550,7 +5544,7 @@ snapshots:
 
   '@microsoft/tsdoc@0.16.0': {}
 
-  '@napi-rs/cli@3.10.9(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.0)':
+  '@napi-rs/cli@3.10.9(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@25.5.0)':
     dependencies:
       '@inquirer/prompts': 8.7.5(@types/node@25.5.0)
       '@napi-rs/cross-toolchain': 1.0.3
@@ -5565,8 +5559,8 @@ snapshots:
       typanion: 3.14.0
       typescript: 6.0.3
     optionalDependencies:
-      '@emnapi/core': 1.9.2
-      '@emnapi/runtime': 1.9.2
+      '@emnapi/core': 1.11.2
+      '@emnapi/runtime': 1.11.2
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -9234,7 +9228,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1):
+  vitest@2.1.9(@types/node@25.5.0)(@vitest/ui@4.1.0(vitest@0.34.6))(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.5.0)(sass@1.98.0)(terser@5.46.1))

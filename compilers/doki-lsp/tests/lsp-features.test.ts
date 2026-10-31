@@ -1,23 +1,14 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { Position, Range } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
 
 describe("LSP Core Functionality", () => {
-    const dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     function createDocument(
         content: string,
         uri = "test://test.dejavu",
@@ -25,104 +16,35 @@ describe("LSP Core Functionality", () => {
         return TextDocument.create(uri, "dejavu", 0, content);
     }
 
+    function parse(source: string, language = DEFAULT_LANGUAGE) {
+        return parseTemplate(source, language);
+    }
+
+    function children(doc: { body: IrNode }): IrNode[] {
+        return doc.body.type === "Template" ? doc.body.children : [];
+    }
+
     describe("Symbol Extraction", () => {
-        // legacy-programming-only: let / VariableDeclaration not in IR
-        it.skip("should extract variable declarations (legacy-programming-only: not in IR)", () => {
-            const content = `<% let x = 42 %>
-<% let name = "hello" %>`;
-            const _document = createDocument(content);
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBeGreaterThan(0);
-        });
-
-        // legacy-programming-only: micro / FunctionDeclaration not in IR
-        it.skip("should extract function declarations (legacy-programming-only: not in IR)", () => {
-            const content = `<% micro greet(name) %>
-Hello, <% name %>!
-<% end micro %>`;
-            const _document = createDocument(content);
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
-            expect(funcDecl.name.name).toBe("greet");
-            expect(funcDecl.params.length).toBe(1);
-        });
-
         it("should extract loop variables", () => {
             const content = `<% loop i in items %>
 Count: <% i %>
 <% end loop %>`;
-            const _document = createDocument(content);
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(content);
+            expect(doc.body.type).toBe("Template");
 
-            expect(ast.type).toBe(NodeType.Program);
-
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-        });
-    });
-
-    describe("Scope Analysis", () => {
-        // legacy-programming-only: micro not in IR
-        it.skip("should create function scope (legacy-programming-only: not in IR)", () => {
-            const content = `<% micro add(a, b) %>
-<% a + b %>
-<% end micro %>`;
-            const _document = createDocument(content);
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
-            expect(funcDecl.params).toHaveLength(2);
-        });
-
-        // IR loop form is `loop item in iterable` only (no index tuple)
-        it.skip("should create loop scope (legacy-programming-only: indexed loop not in IR)", () => {
-            const content = `<% loop (index, item) in items %>
-<% index %>: <% item %>
-<% end loop %>`;
-            const _document = createDocument(content);
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-            expect(Array.isArray(forInStmt.left)).toBe(true);
+            const forStmt = children(doc).find((n) => n.type === "Stmt.For");
+            expect(forStmt).toBeDefined();
         });
     });
 
     describe("Error Recovery", () => {
-        // IR parser is strict — unclosed delimiters throw (legacy soft-recovery skipped)
+        // IR parser is strict — unclosed delimiters throw
         it("should throw on unclosed delimiters", () => {
-            const content = `<% if true %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            expect(() => parser.parse()).toThrow();
+            expect(() => parse(`<% if true %>`)).toThrow();
         });
 
         it("should handle invalid syntax", () => {
-            const content = `<% + %>`;
-
-            expect(() => {
-                const parser = new Parser(content, dejavuLanguage);
-                parser.parse();
-            }).toThrow();
+            expect(() => parse(`<% + %>`)).toThrow();
         });
     });
 
@@ -131,12 +53,10 @@ Count: <% i %>
             const content = `{% if x > 0 %}
 Positive
 {% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
+            const doc = parse(content, DOKI_LANGUAGE);
+            expect(doc.body.type).toBe("Template");
             expect(
-                ast.body.some((n: any) => n.type === NodeType.IfStatement),
+                children(doc).some((n) => n.type === "Stmt.If"),
             ).toBe(true);
         });
 
@@ -144,55 +64,35 @@ Positive
             const content = `<% if x > 0 %>
 Positive
 <% end if %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
+            const doc = parse(content, DEFAULT_LANGUAGE);
+            expect(doc.body.type).toBe("Template");
             expect(
-                ast.body.some((n: any) => n.type === NodeType.IfStatement),
+                children(doc).some((n) => n.type === "Stmt.If"),
             ).toBe(true);
         });
     });
 
     describe("AST Structure", () => {
-        // IR spans not populated yet
-        it.skip("should have correct location info (IR spans not populated yet)", () => {
-            const content = `<% name %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            const expr = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
-            expect(expr).toBeDefined();
-            expect(expr.loc).toBeDefined();
-            expect(expr.loc.start.line).toBe(1);
-        });
-
         it("should parse nested expressions", () => {
             const content = `<% (1 + 2) * 3 %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(content);
 
-            const exprStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
-            expect(exprStmt).toBeDefined();
-            expect((exprStmt as any).expression.type).toBe(
-                NodeType.BinaryExpression,
-            );
+            const expr = children(doc).find(
+                (n) => n.type === "Interpolation",
+            ) as Extract<IrNode, { type: "Interpolation" }>;
+            expect(expr).toBeDefined();
+            expect(expr.expression.type).toBe("Expr.Binary");
         });
 
         it("should parse member expressions", () => {
             const content = `<% user.name %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(content);
 
-            const exprStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
-            expect(exprStmt).toBeDefined();
-            expect(exprStmt.expression.type).toBe(NodeType.MemberExpression);
+            const expr = children(doc).find(
+                (n) => n.type === "Interpolation",
+            ) as Extract<IrNode, { type: "Interpolation" }>;
+            expect(expr).toBeDefined();
+            expect(expr.expression.type).toBe("Expr.Member");
         });
     });
 
@@ -209,11 +109,10 @@ Positive
   <% end loop %>
 </body>
 </html>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(content);
 
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBeGreaterThan(0);
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).length).toBeGreaterThan(0);
         });
 
         it("should parse nested control structures", () => {
@@ -224,10 +123,9 @@ Positive
     <% end if %>
   <% end loop %>
 <% end if %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(content);
 
-            expect(ast.type).toBe(NodeType.Program);
+            expect(doc.body.type).toBe("Template");
         });
     });
 

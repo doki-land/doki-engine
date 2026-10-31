@@ -1,246 +1,143 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
+import { DOKI_LANGUAGE, parseTemplate } from "../src/template/index";
+
+function parseExpr(source: string) {
+    const doc = parseTemplate(source, DOKI_LANGUAGE);
+    if (doc.body.type !== "Template") {
+        throw new Error("expected Template root");
+    }
+    const interp = doc.body.children.find(
+        (n) => n.type === "Interpolation",
+    ) as Extract<
+        (typeof doc.body.children)[number],
+        { type: "Interpolation" }
+    >;
+    return interp.expression;
+}
 
 describe("Type Inference Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     describe("Literal Type Inference", () => {
         it("should parse number literal", () => {
-            const content = "{{ 42 }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% 42 %}").type).toBe("Expr.Literal");
         });
 
         it("should parse string literal", () => {
-            const content = '{{ "hello" }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr('{% "hello" %}').type).toBe("Expr.Literal");
         });
 
         it("should parse boolean literal", () => {
-            const content = "{{ true }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% true %}").type).toBe("Expr.Literal");
         });
 
         it("should parse null literal", () => {
-            const content = "{{ null }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% null %}").type).toBe("Expr.Literal");
         });
     });
 
-    describe("Array Type Inference", () => {
-        it("should parse array literal", () => {
-            const content = "{{ [1, 2, 3] }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+    // engine template IR has no array literal syntax
+    describe("Array Literals (not in engine contract)", () => {
+        it("should reject array literal", () => {
+            expect(() => parseTemplate("{% [1, 2, 3] %}", DOKI_LANGUAGE)).toThrow();
         });
 
-        it("should parse empty array", () => {
-            const content = "{{ [] }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-        });
-
-        it("should parse mixed array", () => {
-            const content = '{{ [1, "two", true] }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+        it("should reject empty array literal", () => {
+            expect(() => parseTemplate("{% [] %}", DOKI_LANGUAGE)).toThrow();
         });
     });
 
     describe("Object Type Inference", () => {
         it("should parse object literal", () => {
-            const content = '{{ { name: "test", value: 42 } }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(
+                parseExpr('{% { name: "test", value: 42 } %}').type,
+            ).toBeDefined();
         });
 
         it("should parse empty object", () => {
-            const content = "{{ {} }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% {} %}").type).toBeDefined();
         });
     });
 
     describe("Binary Expression Type Inference", () => {
         it("should parse arithmetic operations", () => {
-            const content = "{{ 1 + 2 }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% 1 + 2 %}").type).toBe("Expr.Binary");
         });
 
         it("should parse string concatenation", () => {
-            const content = '{{ "hello" + " world" }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr('{% "hello" + " world" %}').type).toBe(
+                "Expr.Binary",
+            );
         });
 
         it("should parse comparison operations", () => {
-            const content = "{{ 1 < 2 }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% 1 < 2 %}").type).toBe("Expr.Binary");
         });
 
         it("should parse equality operations", () => {
-            const content = "{{ a == b }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% a == b %}").type).toBe("Expr.Binary");
         });
 
-        it("should parse range expression", () => {
-            const content = "{{ 1..10 }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+        it("should reject range expression (not in engine contract)", () => {
+            expect(() => parseTemplate("{% 1..10 %}", DOKI_LANGUAGE)).toThrow();
         });
     });
 
     describe("Unary Expression Type Inference", () => {
-        it("should parse not operator", () => {
-            const content = "{{ not true }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+        it("should parse bang operator", () => {
+            expect(parseExpr("{% !true %}").type).toBe("Expr.Unary");
         });
 
         it("should parse negation", () => {
-            const content = "{{ -5 }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% -5 %}").type).toBeDefined();
+        });
+
+        it("should reject `not` keyword (not in engine contract)", () => {
+            expect(() =>
+                parseTemplate("{% not true %}", DOKI_LANGUAGE),
+            ).toThrow();
         });
     });
 
     describe("Call Expression Type Inference", () => {
         it("should parse function call", () => {
-            const content = "{{ len(items) }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% len(items) %}").type).toBe("Expr.Call");
         });
 
         it("should parse string function call", () => {
-            const content = '{{ upper("hello") }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr('{% upper("hello") %}').type).toBe("Expr.Call");
         });
     });
 
     describe("Member Expression Type Inference", () => {
         it("should parse property access", () => {
-            const content = "{{ user.name }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% user.name %}").type).toBe("Expr.Member");
         });
 
         it("should parse nested property access", () => {
-            const content = "{{ user.address.city }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% user.address.city %}").type).toBe(
+                "Expr.Member",
+            );
         });
 
         it("should parse array index access", () => {
-            const content = "{{ items[0] }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% items[0] %}").type).toBe("Expr.Index");
         });
     });
 
     describe("Filter Expression Type Inference", () => {
         it("should parse filter expression", () => {
-            const content = "{{ name |> upper }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% name |> upper %}").type).toBe("Expr.Pipe");
         });
 
         it("should parse chained filter expressions", () => {
-            const content = "{{ name |> trim |> upper }}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
+            expect(parseExpr("{% name |> trim |> upper %}").type).toBe(
+                "Expr.Pipe",
+            );
         });
 
         it("should parse filter with arguments", () => {
-            const content = '{{ name |> replace("a", "b") }}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-        });
-    });
-
-    // legacy-programming-only: `let` / VariableDeclaration are not in the IR template contract
-    describe.skip("Variable Declaration Type Inference (legacy-programming-only: not in IR)", () => {
-        it("should parse variable with number value", () => {
-            const content = "{% let x = 42 %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
-        });
-
-        it("should parse variable with string value", () => {
-            const content = '{% let name = "test" %}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
-        });
-
-        it("should parse variable with array value", () => {
-            const content = "{% let items = [1, 2, 3] %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
-        });
-
-        it("should parse variable with object value", () => {
-            const content = "{% let config = { debug: true } %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-            expect(ast.type).toBe(NodeType.Program);
-
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
+            expect(
+                parseExpr('{% name |> replace("a", "b") %}').type,
+            ).toBe("Expr.Pipe");
         });
     });
 });

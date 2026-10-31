@@ -1,22 +1,17 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
+
+function children(doc: { body: IrNode }): IrNode[] {
+    return doc.body.type === "Template" ? doc.body.children : [];
+}
 
 describe("Formatting Features", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    const dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
     function createDocument(
         content: string,
         uri = "test://test.doki",
@@ -30,11 +25,10 @@ describe("Formatting Features", () => {
 Positive
 {% end if %}`;
             const _document = createDocument(content);
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBeGreaterThan(0);
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).length).toBeGreaterThan(0);
         });
 
         it("should detect dejavu code blocks", () => {
@@ -42,24 +36,20 @@ Positive
 Positive
 <% end if %>`;
             const _document = createDocument(content, "test://test.dejavu");
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DEFAULT_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBeGreaterThan(0);
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).length).toBeGreaterThan(0);
         });
     });
 
     describe("Whitespace Normalization", () => {
         it("should handle extra whitespace in delimiters", () => {
             const content = `{%   if true   %}yes{% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            expect(doc.body.type).toBe("Template");
+            const ifStmt = children(doc).find((n) => n.type === "Stmt.If");
             expect(ifStmt).toBeDefined();
         });
     });
@@ -69,13 +59,10 @@ Positive
             const content = `{% if condition %}
 Body
 {% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            expect(doc.body.type).toBe("Template");
+            const ifStmt = children(doc).find((n) => n.type === "Stmt.If");
             expect(ifStmt).toBeDefined();
         });
 
@@ -83,60 +70,19 @@ Body
             const content = `{% loop i in items %}
 Item {% i %}
 {% end loop %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-        });
-
-        // legacy-programming-only: match not in IR
-        it.skip("should parse well-formatted match statement (legacy-programming-only: not in IR)", () => {
-            const content = `{% match value %}
-{% case "a" %}A
-{% case _ %}Other
-{% end match %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-            const matchStmt = ast.body.find(
-                (n: any) => n.type === NodeType.MatchStatement,
-            );
-            expect(matchStmt).toBeDefined();
-        });
-
-        // legacy-programming-only: micro not in IR
-        it.skip("should parse well-formatted micro function (legacy-programming-only: not in IR)", () => {
-            const content = `<% micro greet(name) %>
-Hello, <% name %>!
-<% end micro %>`;
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
+            expect(doc.body.type).toBe("Template");
+            const forStmt = children(doc).find((n) => n.type === "Stmt.For");
+            expect(forStmt).toBeDefined();
         });
     });
 });
 
 describe("Code Action Scenarios", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     describe("Delimiter Mismatch Detection", () => {
         it("should detect unclosed code delimiter", () => {
-            const content = `{% let x = 1`;
+            const content = `{% if x > 1`;
             const _document = TextDocument.create(
                 "test://test.doki",
                 "doki",
@@ -181,19 +127,15 @@ describe("Code Action Scenarios", () => {
     });
 
     describe("Extract Variable Refactoring", () => {
-        // legacy-programming-only: let not in IR — retargeted to expression extractability
         it("should identify extractable expression", () => {
             const content = `{% (1 + 2) * 3 %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const exprStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ExpressionStatement,
-            );
-            expect(exprStmt).toBeDefined();
-            expect((exprStmt as any).expression.type).toBe(
-                NodeType.BinaryExpression,
-            );
+            const expr = children(doc).find(
+                (n) => n.type === "Interpolation",
+            ) as Extract<IrNode, { type: "Interpolation" }>;
+            expect(expr).toBeDefined();
+            expect(expr.expression.type).toBe("Expr.Binary");
         });
     });
 });
@@ -219,21 +161,13 @@ describe("Language Configuration", () => {
 });
 
 describe("Template Inheritance", () => {
-    const dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
     it("should parse extends statement", () => {
         const content = `<% extends "base.html" %>`;
-        const parser = new Parser(content, dejavuLanguage);
-        const ast = parser.parse();
+        const doc = parseTemplate(content, DEFAULT_LANGUAGE);
 
-        expect(ast.type).toBe(NodeType.Program);
-        const extendsStmt = ast.body.find(
-            (n: any) => n.type === NodeType.ExtendsStatement,
+        expect(doc.body.type).toBe("Template");
+        const extendsStmt = children(doc).find(
+            (n) => n.type === "Stmt.Extends",
         );
         expect(extendsStmt).toBeDefined();
     });
@@ -242,25 +176,15 @@ describe("Template Inheritance", () => {
         const content = `<% block content %>
 Default content
 <% end block %>`;
-        const parser = new Parser(content, dejavuLanguage);
-        const ast = parser.parse();
+        const doc = parseTemplate(content, DEFAULT_LANGUAGE);
 
-        expect(ast.type).toBe(NodeType.Program);
-        const blockDecl = ast.body.find(
-            (n: any) => n.type === NodeType.BlockDeclaration,
-        );
+        expect(doc.body.type).toBe("Template");
+        const blockDecl = children(doc).find((n) => n.type === "Stmt.Block");
         expect(blockDecl).toBeDefined();
     });
 });
 
 describe("Complex Templates", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     it("should parse nested control structures", () => {
         const content = `{% if condition %}
   {% loop i in items %}
@@ -269,10 +193,9 @@ describe("Complex Templates", () => {
     {% end if %}
   {% end loop %}
 {% end if %}`;
-        const parser = new Parser(content, dokiLanguage);
-        const ast = parser.parse();
+        const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-        expect(ast.type).toBe(NodeType.Program);
+        expect(doc.body.type).toBe("Template");
     });
 
     it("should parse template with mixed content and code", () => {
@@ -287,24 +210,20 @@ describe("Complex Templates", () => {
   {% end loop %}
 </body>
 </html>`;
-        const parser = new Parser(content, dokiLanguage);
-        const ast = parser.parse();
+        const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-        expect(ast.type).toBe(NodeType.Program);
-        expect(ast.body.length).toBeGreaterThan(0);
+        expect(doc.body.type).toBe("Template");
+        expect(children(doc).length).toBeGreaterThan(0);
     });
 
     it("should handle comments in templates", () => {
         const content = `{# This is a comment #}
 {% if true %}ok{% end if %}
 {# Another comment #}`;
-        const parser = new Parser(content, dokiLanguage);
-        const ast = parser.parse();
+        const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-        expect(ast.type).toBe(NodeType.Program);
-        const comments = ast.body.filter(
-            (n: any) => n.type === NodeType.Comment,
-        );
+        expect(doc.body.type).toBe("Template");
+        const comments = children(doc).filter((n) => n.type === "Comment");
         expect(comments.length).toBe(2);
     });
 });

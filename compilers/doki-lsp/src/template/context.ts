@@ -6,9 +6,8 @@
  * Pipe operator is `|>` only (engine contract).
  */
 
-import type { Language } from "@doki-land/dejavu-engine";
 import { type CodeHeadKind, classifyCodeHead } from "./heads";
-import { tryParseToIr, walkIr } from "./ir";
+import { tryParseToIr, type TemplateLanguage, walkIr } from "./ir";
 import {
     type Delimiters,
     offsetInCodeRegion,
@@ -43,7 +42,7 @@ export function detectCursorContext(
     source: string,
     offset: number,
     delimiters: Delimiters,
-    language?: Language | { asLanguage(): Language },
+    language?: TemplateLanguage,
 ): CursorContext {
     // Filter pipe: contract is `|>` — detectable even on incomplete buffers.
     const before = source.slice(Math.max(0, offset - 40), offset);

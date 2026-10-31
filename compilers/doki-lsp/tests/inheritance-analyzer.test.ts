@@ -1,22 +1,17 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import {
+    DEFAULT_LANGUAGE,
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
+
+function children(doc: { body: IrNode }): IrNode[] {
+    return doc.body.type === "Template" ? doc.body.children : [];
+}
 
 describe("Template Inheritance Analyzer Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    const dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
     function _createDocument(
         content: string,
         uri = "test://test.doki",
@@ -24,198 +19,139 @@ describe("Template Inheritance Analyzer Tests", () => {
         return TextDocument.create(uri, "doki", 0, content);
     }
 
+    function parse(source: string, language = DOKI_LANGUAGE) {
+        return parseTemplate(source, language);
+    }
+
     describe("Extends Statement Analysis", () => {
         it("should parse extends statement with string literal", () => {
-            const content = '{% extends "base.html" %}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse('{% extends "base.html" %}');
 
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBe(1);
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).length).toBe(1);
 
-            const extendsStmt = ast.body[0] as any;
-            expect(extendsStmt.type).toBe("ExtendsStatement");
-            expect(extendsStmt.template.value).toBe("base.html");
+            const extendsStmt = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Extends" }
+            >;
+            expect(extendsStmt.type).toBe("Stmt.Extends");
+            expect(
+                extendsStmt.parent.type === "Expr.Literal" &&
+                    extendsStmt.parent.value,
+            ).toBe("base.html");
         });
 
         it("should parse extends statement with path", () => {
-            const content = '{% extends "layouts/main.html" %}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse('{% extends "layouts/main.html" %}');
 
-            const extendsStmt = ast.body[0] as any;
-            expect(extendsStmt.template.value).toBe("layouts/main.html");
+            const extendsStmt = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Extends" }
+            >;
+            expect(
+                extendsStmt.parent.type === "Expr.Literal" &&
+                    extendsStmt.parent.value,
+            ).toBe("layouts/main.html");
         });
 
         it("should parse extends with variable", () => {
-            const content = "{% extends parent %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse("{% extends parent %}");
 
-            const extendsStmt = ast.body[0] as any;
-            expect(extendsStmt.type).toBe("ExtendsStatement");
+            const extendsStmt = children(doc)[0];
+            expect(extendsStmt.type).toBe("Stmt.Extends");
         });
     });
 
     describe("Block Declaration Analysis", () => {
         it("should parse empty block", () => {
-            const content = "{% block content %}{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse("{% block content %}{% end block %}");
 
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.type).toBe("BlockDeclaration");
-            expect(blockDecl.name.name).toBe("content");
+            const blockDecl = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Block" }
+            >;
+            expect(blockDecl.type).toBe("Stmt.Block");
+            expect(blockDecl.name).toBe("content");
         });
 
         it("should parse block with content", () => {
-            const content = "{% block title %}Hello World{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse("{% block title %}Hello World{% end block %}");
 
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.name.name).toBe("title");
+            const blockDecl = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Block" }
+            >;
+            expect(blockDecl.name).toBe("title");
             expect(blockDecl.body).toBeDefined();
         });
 
         it("should parse nested blocks", () => {
-            const content = `{% block outer %}
+            const doc = parse(`{% block outer %}
 {% block inner %}Nested{% end block %}
-{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+{% end block %}`);
 
-            const outerBlock = ast.body[0] as any;
-            expect(outerBlock.name.name).toBe("outer");
+            const outerBlock = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Block" }
+            >;
+            expect(outerBlock.name).toBe("outer");
         });
 
         it("should parse multiple blocks", () => {
-            const content = `{% block header %}Header{% end block %}{% block content %}Content{% end block %}{% block footer %}Footer{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(`{% block header %}Header{% end block %}{% block content %}Content{% end block %}{% block footer %}Footer{% end block %}`);
 
-            const blocks = ast.body.filter(
-                (n: any) => n.type === "BlockDeclaration",
+            const blocks = children(doc).filter(
+                (n) => n.type === "Stmt.Block",
             );
-            expect(blocks.length).toBeGreaterThanOrEqual(1);
-        });
-    });
-
-    // legacy-programming-only: prepend / append are not in the IR template contract
-    describe.skip("Prepend Statement Analysis (legacy-programming-only: not in IR)", () => {
-        it("should parse prepend statement", () => {
-            const content = "{% prepend sidebar %}Extra{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const prependStmt = ast.body[0] as any;
-            expect(prependStmt.type).toBe("PrependStatement");
-            expect(prependStmt.name.name).toBe("sidebar");
-        });
-
-        it("should parse prepend with complex content", () => {
-            const content = `{% prepend head %}
-<meta name="description" content="test">
-<link rel="stylesheet" href="extra.css">
-{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const prependStmt = ast.body[0] as any;
-            expect(prependStmt.type).toBe("PrependStatement");
-        });
-    });
-
-    describe.skip("Append Statement Analysis (legacy-programming-only: not in IR)", () => {
-        it("should parse append statement", () => {
-            const content = "{% append scripts %}<script>{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const appendStmt = ast.body[0] as any;
-            expect(appendStmt.type).toBe("AppendStatement");
-            expect(appendStmt.name.name).toBe("scripts");
-        });
-
-        it("should parse append with multiple elements", () => {
-            const content = `{% append footer %}
-<script src="a.js"></script>
-<script src="b.js"></script>
-{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const appendStmt = ast.body[0] as any;
-            expect(appendStmt.type).toBe("AppendStatement");
+            expect(blocks.length).toBe(3);
         });
     });
 
     describe("Super Expression Analysis", () => {
-        it("should parse super() expression", () => {
-            const content =
-                "{% block content %}{% super() %} Extra{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.type).toBe("BlockDeclaration");
+        it("super() 带括号形式被引擎拒绝", () => {
+            expect(() =>
+                parse("{% block content %}{% super() %} Extra{% end block %}"),
+            ).toThrow();
         });
 
         it("should parse super without parentheses", () => {
-            const content = "{% block content %}{% super %}{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse("{% block content %}{% super %}{% end block %}");
 
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.type).toBe("BlockDeclaration");
+            const blockDecl = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Block" }
+            >;
+            expect(blockDecl.type).toBe("Stmt.Block");
+            expect(blockDecl.body.some((c) => c.type === "Stmt.Super")).toBe(
+                true,
+            );
         });
     });
 
     describe("Complete Template Inheritance", () => {
         it("should parse complete inheritance template", () => {
-            const content = `{% extends "base.html" %}{% block title %}My Page{% end block %}{% block content %}<h1>Welcome</h1><p>This is my page.</p>{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(`{% extends "base.html" %}{% block title %}My Page{% end block %}{% block content %}<h1>Welcome</h1><p>This is my page.</p>{% end block %}`);
 
-            const extendsStmt = ast.body.find(
-                (n: any) => n.type === "ExtendsStatement",
+            const extendsStmt = children(doc).find(
+                (n) => n.type === "Stmt.Extends",
             );
             expect(extendsStmt).toBeDefined();
 
-            const blocks = ast.body.filter(
-                (n: any) => n.type === "BlockDeclaration",
+            const blocks = children(doc).filter(
+                (n) => n.type === "Stmt.Block",
             );
-            expect(blocks.length).toBeGreaterThanOrEqual(1);
-        });
-
-        // legacy-programming-only: prepend not in IR
-        it.skip("should parse template with prepend and append (legacy-programming-only: not in IR)", () => {
-            const content = `{% extends "base.html" %}{% prepend head %}test{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const extendsStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ExtendsStatement,
-            );
-            expect(extendsStmt).toBeDefined();
-
-            const prependStmt = ast.body.find(
-                (n: any) => n.type === NodeType.PrependStatement,
-            );
-            expect(prependStmt).toBeDefined();
+            expect(blocks.length).toBeGreaterThanOrEqual(2);
         });
 
         it("should parse template with super in block", () => {
-            const content = `{% extends "base.html" %}
+            const doc = parse(`{% extends "base.html" %}
 {% block content %}
-{% super() %}
+{% super %}
 <p>Additional content</p>
-{% end block %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+{% end block %}`);
 
-            const blockDecl = ast.body.find(
-                (n: any) => n.type === "BlockDeclaration",
+            const blockDecl = children(doc).find(
+                (n) => n.type === "Stmt.Block",
             );
             expect(blockDecl).toBeDefined();
         });
@@ -223,127 +159,52 @@ describe("Template Inheritance Analyzer Tests", () => {
 
     describe("Block in Control Flow", () => {
         it("should parse block inside if statement", () => {
-            const content = `{% if showBlock %}
+            const doc = parse(`{% if showBlock %}
 {% block conditional %}Content{% end block %}
-{% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+{% end if %}`);
 
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            const ifStmt = children(doc).find((n) => n.type === "Stmt.If");
             expect(ifStmt).toBeDefined();
         });
 
         it("should parse block inside loop", () => {
-            const content = `{% loop i in items %}
-{% block item %}{{ i }}{% end block %}
-{% end loop %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(`{% loop i in items %}
+{% block item %}X{% end block %}
+{% end loop %}`);
 
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
+            const forStmt = children(doc).find((n) => n.type === "Stmt.For");
+            expect(forStmt).toBeDefined();
         });
     });
 
     describe("Dejavu Language Support", () => {
         it("should parse extends in dejavu syntax", () => {
-            const content = '<% extends "base.html" %>';
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse('<% extends "base.html" %>', DEFAULT_LANGUAGE);
 
-            const extendsStmt = ast.body[0] as any;
-            expect(extendsStmt.type).toBe("ExtendsStatement");
+            const extendsStmt = children(doc)[0];
+            expect(extendsStmt.type).toBe("Stmt.Extends");
         });
 
         it("should parse block in dejavu syntax", () => {
-            const content = "<% block content %>Default<% end block %>";
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
+            const doc = parse(
+                "<% block content %>Default<% end block %>",
+                DEFAULT_LANGUAGE,
+            );
 
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.type).toBe("BlockDeclaration");
-        });
-
-        it.skip("should parse prepend in dejavu syntax (legacy-programming-only: not in IR)", () => {
-            const content = "<% prepend head %><meta><% end block %>";
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            const prependStmt = ast.body[0] as any;
-            expect(prependStmt.type).toBe("PrependStatement");
-        });
-
-        it.skip("should parse append in dejavu syntax (legacy-programming-only: not in IR)", () => {
-            const content = "<% append scripts %><script><% end block %>";
-            const parser = new Parser(content, dejavuLanguage);
-            const ast = parser.parse();
-
-            const appendStmt = ast.body[0] as any;
-            expect(appendStmt.type).toBe("AppendStatement");
+            const blockDecl = children(doc)[0];
+            expect(blockDecl.type).toBe("Stmt.Block");
         });
     });
 
     describe("Block Name Extraction", () => {
         it("should extract block name correctly", () => {
-            const content = "{% block myBlock %}content{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse("{% block myBlock %}content{% end block %}");
 
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.name.name).toBe("myBlock");
-        });
-
-        it.skip("should extract prepend name correctly (legacy-programming-only: not in IR)", () => {
-            const content = "{% prepend myPrepend %}content{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const prependStmt = ast.body[0] as any;
-            expect(prependStmt.name.name).toBe("myPrepend");
-        });
-
-        it.skip("should extract append name correctly (legacy-programming-only: not in IR)", () => {
-            const content = "{% append myAppend %}content{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const appendStmt = ast.body[0] as any;
-            expect(appendStmt.name.name).toBe("myAppend");
-        });
-    });
-
-    // IR parser does not attach spans yet — loc remains undefined on adapted nodes
-    describe.skip("Location Information (IR spans not populated yet)", () => {
-        it("should have location info for block", () => {
-            const content = "{% block content %}text{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.loc).toBeDefined();
-            expect(blockDecl.loc.start.line).toBe(1);
-        });
-
-        it("should have location info for extends", () => {
-            const content = '{% extends "base.html" %}';
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const extendsStmt = ast.body[0] as any;
-            expect(extendsStmt.loc).toBeDefined();
-        });
-
-        it("should have correct end location for block", () => {
-            const content = "{% block content %}text{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const blockDecl = ast.body[0] as any;
-            expect(blockDecl.loc.end).toBeDefined();
+            const blockDecl = children(doc)[0] as Extract<
+                IrNode,
+                { type: "Stmt.Block" }
+            >;
+            expect(blockDecl.name).toBe("myBlock");
         });
     });
 
@@ -351,42 +212,36 @@ describe("Template Inheritance Analyzer Tests", () => {
         it("should parse multi-level inheritance simulation", () => {
             const childContent = `{% extends "parent.html" %}
 {% block content %}
-{% super() %}
+{% super %}
 <p>Child content</p>
 {% end block %}`;
 
-            const parser = new Parser(childContent, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parse(childContent);
 
-            const significant = ast.body.filter(
-                (n: any) => n.type !== NodeType.Text,
+            const significant = children(doc).filter(
+                (n) => n.type !== "Text",
             );
             expect(significant.length).toBe(2);
             expect(
-                significant.some(
-                    (n: any) => n.type === NodeType.ExtendsStatement,
-                ),
+                significant.some((n) => n.type === "Stmt.Extends"),
             ).toBe(true);
             expect(
-                significant.some(
-                    (n: any) => n.type === NodeType.BlockDeclaration,
-                ),
+                significant.some((n) => n.type === "Stmt.Block"),
             ).toBe(true);
         });
 
-        it("should parse template with block and prepend", () => {
-            const content = `{% extends "base.html" %}{% block title %}My Title{% end block %}`;
+        it("should parse template with block override", () => {
+            const doc = parse(
+                `{% extends "base.html" %}{% block title %}My Title{% end block %}`,
+            );
 
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const extendsStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ExtendsStatement,
+            const extendsStmt = children(doc).find(
+                (n) => n.type === "Stmt.Extends",
             );
             expect(extendsStmt).toBeDefined();
 
-            const blocks = ast.body.filter(
-                (n: any) => n.type === NodeType.BlockDeclaration,
+            const blocks = children(doc).filter(
+                (n) => n.type === "Stmt.Block",
             );
             expect(blocks.length).toBeGreaterThanOrEqual(1);
         });

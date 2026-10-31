@@ -6,8 +6,7 @@
  * via Language.template delimiters (see context.ts) without inventing grammar rules.
  */
 
-import type { Language } from "@doki-land/dejavu-engine";
-import { tryParseToIr } from "./ir";
+import { tryParseToIr, type TemplateLanguage } from "./ir";
 
 export type TemplateDiagnostic = {
     message: string;
@@ -22,7 +21,7 @@ export type TemplateDiagnostic = {
  */
 export function collectStructuralDiagnostics(
     source: string,
-    language?: Language | { asLanguage(): Language },
+    language?: TemplateLanguage,
     file = "template.dejavu",
 ): TemplateDiagnostic[] {
     const parsed = tryParseToIr(source, language, file);

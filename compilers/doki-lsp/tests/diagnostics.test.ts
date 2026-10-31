@@ -1,33 +1,20 @@
-import { DejavuLanguage, NodeType, Parser } from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
 import { Position, Range } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import {
+    DOKI_LANGUAGE,
+    parseTemplate,
+    type IrNode,
+} from "../src/template/index";
+
+function children(doc: { body: IrNode }): IrNode[] {
+    return doc.body.type === "Template" ? doc.body.children : [];
+}
 
 describe("Diagnostics Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    const _dejavuLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "<%",
-        codeEnd: "%>",
-        commentStart: "<#",
-        commentEnd: "#>",
-    });
-
-    function _createDocument(
-        content: string,
-        uri = "test://test.doki",
-    ): TextDocument {
-        return TextDocument.create(uri, "doki", 0, content);
-    }
-
     describe("Delimiter Diagnostics", () => {
         it("should detect unclosed code delimiter", () => {
-            const content = "{% let x = 1";
+            const content = "{% if x > 1";
             const openCode = (content.match(/{%/g) || []).length;
             const closeCode = (content.match(/%}/g) || []).length;
 
@@ -47,7 +34,7 @@ describe("Diagnostics Tests", () => {
         });
 
         it("should detect extra closing delimiter", () => {
-            const content = "{% let x = 1 %} %}";
+            const content = "{% if x > 1 %} %}";
             const openCode = (content.match(/{%/g) || []).length;
             const closeCode = (content.match(/%}/g) || []).length;
 
@@ -55,7 +42,7 @@ describe("Diagnostics Tests", () => {
         });
 
         it("should accept balanced delimiters", () => {
-            const content = "{% let x = 1 %}{% let y = 2 %}";
+            const content = "{% if x > 1 %}{% end if %}";
             const openCode = (content.match(/{%/g) || []).length;
             const closeCode = (content.match(/%}/g) || []).length;
 
@@ -64,66 +51,29 @@ describe("Diagnostics Tests", () => {
     });
 
     describe("Syntax Error Detection", () => {
-        // legacy-programming-only: `let` / VariableDeclaration not in IR
-        it.skip("should parse valid variable declaration (legacy-programming-only: not in IR)", () => {
-            const content = "{% let x = 42 %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
-        });
-
         it("should parse valid if statement", () => {
             const content = "{% if true %}yes{% end if %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            expect(doc.body.type).toBe("Template");
+            const ifStmt = children(doc).find((n) => n.type === "Stmt.If");
             expect(ifStmt).toBeDefined();
         });
 
         it("should parse valid loop statement", () => {
             const content = "{% loop i in items %}{% i %}{% end loop %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-        });
-
-        // legacy-programming-only: match not in IR
-        it.skip("should parse valid match statement (legacy-programming-only: not in IR)", () => {
-            const content = `{% match x %}
-{% case 1 %}One
-{% case _ %}Other
-{% end match %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-            const matchStmt = ast.body.find(
-                (n: any) => n.type === NodeType.MatchStatement,
-            );
-            expect(matchStmt).toBeDefined();
+            expect(doc.body.type).toBe("Template");
+            const forStmt = children(doc).find((n) => n.type === "Stmt.For");
+            expect(forStmt).toBeDefined();
         });
     });
 
     describe("Error Recovery", () => {
         it("should handle partial input gracefully", () => {
             const content = "{% if ";
-            const parser = new Parser(content, dokiLanguage);
-
-            expect(() => parser.parse()).toThrow();
+            expect(() => parseTemplate(content, DOKI_LANGUAGE)).toThrow();
         });
 
         it("should continue parsing after valid statements in block", () => {
@@ -131,23 +81,15 @@ describe("Diagnostics Tests", () => {
 valid content
 {% end if %}
 {% loop i in items %}{% i %}{% end loop %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
-            expect(ast.body.length).toBeGreaterThan(0);
+            expect(doc.body.type).toBe("Template");
+            expect(children(doc).length).toBeGreaterThan(0);
         });
     });
 });
 
 describe("Completion Context Detection", () => {
-    const _dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
     function detectContext(
         lineContent: string,
         cursorPosition: number,
@@ -217,7 +159,7 @@ describe("Completion Context Detection", () => {
         });
 
         it("should detect variable context with partial keyword", () => {
-            const line = "{% le";
+            const line = "{% lo";
             const context = detectContext(line, line.length);
             expect(context).toBe("variable");
         });
@@ -245,7 +187,7 @@ describe("Completion Context Detection", () => {
         });
 
         it("should detect text context after closed block", () => {
-            const line = "{% let x = 1 %} text";
+            const line = "{% if true %} text";
             const context = detectContext(line, line.length);
             expect(context).toBe("text");
         });
@@ -253,186 +195,41 @@ describe("Completion Context Detection", () => {
 });
 
 describe("Symbol Table Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    describe("Variable Symbols", () => {
-        // legacy-programming-only: VariableDeclaration / let not in IR
-        it.skip("should extract variable declaration (legacy-programming-only: not in IR)", () => {
-            const content = "{% let x = 42 %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const varDecl = ast.body.find(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecl).toBeDefined();
-            expect((varDecl as any).name.name).toBe("x");
-        });
-
-        it.skip("should extract multiple variable declarations (legacy-programming-only: not in IR)", () => {
-            const content = "{% let x = 1 %}{% let y = 2 %}{% let z = 3 %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const varDecls = ast.body.filter(
-                (n: any) => n.type === NodeType.VariableDeclaration,
-            );
-            expect(varDecls).toHaveLength(3);
-        });
-    });
-
-    describe("Function Symbols", () => {
-        // legacy-programming-only: micro / FunctionDeclaration not in IR
-        it.skip("should extract function declaration (legacy-programming-only: not in IR)", () => {
-            const content = `{% micro greet(name) %}
-Hello, {{ name }}!
-{% end micro %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
-            expect((funcDecl as any).name.name).toBe("greet");
-            expect((funcDecl as any).params).toHaveLength(1);
-        });
-
-        it.skip("should extract function with multiple parameters (legacy-programming-only: not in IR)", () => {
-            const content = `{% micro add(a, b, c) %}
-{{ a + b + c }}
-{% end micro %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
-            expect((funcDecl as any).params).toHaveLength(3);
-        });
-    });
-
     describe("Loop Variable Symbols", () => {
         it("should extract loop variable", () => {
             const content = "{% loop i in items %}{% i %}{% end loop %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-            expect((forInStmt as any).left.name).toBe("i");
-        });
-
-        // IR loop form is `loop item in iterable` only (no index tuple)
-        it.skip("should extract indexed loop variables (legacy-programming-only: indexed loop not in IR)", () => {
-            const content =
-                "{% loop (index, item) in items %}{{ index }}: {{ item }}{% end loop %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
-            expect(Array.isArray((forInStmt as any).left)).toBe(true);
-            expect((forInStmt as any).left).toHaveLength(2);
+            const forStmt = children(doc).find(
+                (n) => n.type === "Stmt.For",
+            ) as Extract<IrNode, { type: "Stmt.For" }>;
+            expect(forStmt).toBeDefined();
+            expect(forStmt.item).toBe("i");
         });
     });
 
     describe("Block Symbols", () => {
         it("should extract block declaration", () => {
             const content = "{% block content %}Default{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const blockDecl = ast.body.find(
-                (n: any) => n.type === "BlockDeclaration",
-            );
+            const blockDecl = children(doc).find(
+                (n) => n.type === "Stmt.Block",
+            ) as Extract<IrNode, { type: "Stmt.Block" }>;
             expect(blockDecl).toBeDefined();
-            expect((blockDecl as any).name.name).toBe("content");
-        });
-
-        it.skip("should extract prepend statement (legacy-programming-only: not in IR)", () => {
-            const content = "{% prepend head %}<meta>{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const prependStmt = ast.body.find(
-                (n: any) => n.type === "PrependStatement",
-            );
-            expect(prependStmt).toBeDefined();
-            expect((prependStmt as any).name.name).toBe("head");
-        });
-
-        it.skip("should extract append statement (legacy-programming-only: not in IR)", () => {
-            const content = "{% append scripts %}<script>{% end block %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const appendStmt = ast.body.find(
-                (n: any) => n.type === "AppendStatement",
-            );
-            expect(appendStmt).toBeDefined();
-            expect((appendStmt as any).name.name).toBe("scripts");
+            expect(blockDecl.name).toBe("content");
         });
     });
 });
 
 describe("Scope Analysis Tests", () => {
-    const dokiLanguage = new DejavuLanguage().withTemplate({
-        codeStart: "{%",
-        codeEnd: "%}",
-        commentStart: "{#",
-        commentEnd: "#}",
-    });
-
-    describe("Function Scope", () => {
-        // legacy-programming-only: micro / FunctionDeclaration not in IR
-        it.skip("should create scope for function parameters (legacy-programming-only: not in IR)", () => {
-            const content = `{% micro test(a, b) %}
-{{ a }} - {{ b }}
-{% end micro %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            const funcDecl = ast.body.find(
-                (n: any) => n.type === NodeType.FunctionDeclaration,
-            );
-            expect(funcDecl).toBeDefined();
-            expect((funcDecl as any).params).toHaveLength(2);
-        });
-
-        it.skip("should handle nested function declarations (legacy-programming-only: not in IR)", () => {
-            const content = `{% micro outer() %}
-{% micro inner() %}
-nested
-{% end micro %}
-{% end micro %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
-
-            expect(ast.type).toBe(NodeType.Program);
-        });
-    });
-
     describe("Loop Scope", () => {
         it("should create scope for loop variables", () => {
             const content = "{% loop i in items %}{% i %}{% end loop %}";
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const forInStmt = ast.body.find(
-                (n: any) => n.type === NodeType.ForInStatement,
-            );
-            expect(forInStmt).toBeDefined();
+            const forStmt = children(doc).find((n) => n.type === "Stmt.For");
+            expect(forStmt).toBeDefined();
         });
 
         it("should handle nested loops", () => {
@@ -441,10 +238,9 @@ nested
 {% i %},{% j %}
 {% end loop %}
 {% end loop %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            expect(ast.type).toBe(NodeType.Program);
+            expect(doc.body.type).toBe("Template");
         });
     });
 
@@ -455,14 +251,13 @@ positive
 {% else %}
 non-positive
 {% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            const ifStmt = children(doc).find(
+                (n) => n.type === "Stmt.If",
+            ) as Extract<IrNode, { type: "Stmt.If" }>;
             expect(ifStmt).toBeDefined();
-            expect((ifStmt as any).alternate).toBeDefined();
+            expect(ifStmt.alternate).toBeDefined();
         });
 
         it("should handle if-elseif-else scope", () => {
@@ -473,15 +268,13 @@ negative
 {% else %}
 zero
 {% end if %}`;
-            const parser = new Parser(content, dokiLanguage);
-            const ast = parser.parse();
+            const doc = parseTemplate(content, DOKI_LANGUAGE);
 
-            const ifStmt = ast.body.find(
-                (n: any) => n.type === NodeType.IfStatement,
-            );
+            const ifStmt = children(doc).find(
+                (n) => n.type === "Stmt.If",
+            ) as Extract<IrNode, { type: "Stmt.If" }>;
             expect(ifStmt).toBeDefined();
-            expect((ifStmt as any).elseIfs).toBeDefined();
-            expect((ifStmt as any).elseIfs.length).toBeGreaterThan(0);
+            expect(ifStmt.elseIfs.length).toBeGreaterThan(0);
         });
     });
 });
