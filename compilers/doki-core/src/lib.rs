@@ -29,5 +29,5 @@ pub use protocol::{
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
-pub use render::{markdown_to_html, render_page, RenderedPage, DEFAULT_LAYOUT};
+pub use render::{language_for_ext, markdown_to_html, render_page, RenderedPage, DEFAULT_LAYOUT};
 pub use session::BuildSession;

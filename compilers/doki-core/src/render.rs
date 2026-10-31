@@ -4,7 +4,8 @@
 //! Layout delimiters are chosen by file extension:
 //!
 //! - `.doki` / `.dj` → `{% ... %}` code, `{# ... #}` comments
-//! - `.dejavu` / `.dj` / `.html` (legacy) → default `<% ... %>` code, `<# ... #>` comments
+//! - `.dejavu` / `.html` (legacy) → default `<% ... %>` code, `<# ... #>` comments
+//! - extensionless sources (builtin fallback) → default `<% ... %>` profile
 //!
 //! Dejavu IR has **no** `output_start` / `output_end` — a single slot is classified as
 //! statement or expression by keyword.  There is no `{{ expr }}` or `<%= expr %>`.
