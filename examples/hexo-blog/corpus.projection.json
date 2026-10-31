@@ -1,0 +1,54 @@
+{
+    "contentRoot": "source",
+    "entries": [
+        {
+            "source": "index.md",
+            "target": "index.md",
+            "frontMatter": {
+                "layout": "index"
+            }
+        },
+        {
+            "source": "about.md",
+            "target": "about/index.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "gallery.md",
+            "target": "gallery/index.md",
+            "frontMatter": {
+                "layout": "gallery"
+            }
+        },
+        {
+            "source": "posts/2025-06-15-welcome-to-fate.md",
+            "target": "_posts/2025-06-15-welcome-to-fate.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-07-02-doki-static-site-engine.md",
+            "target": "_posts/2025-07-02-doki-static-site-engine.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-08-10-dejavu-template-language.md",
+            "target": "_posts/2025-08-10-dejavu-template-language.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-09-22-notedown-and-markdown.md",
+            "target": "_posts/2025-09-22-notedown-and-markdown.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-10-05-cosplay-photo-set-1.md",
+            "target": "_posts/2025-10-05-cosplay-photo-set-1.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-10-20-building-a-theme.md",
+            "target": "_posts/2025-10-20-building-a-theme.md",
+            "frontMatter": {}
+        }
+    ]
+}

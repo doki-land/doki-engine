@@ -1,0 +1,67 @@
+{
+    "contentRoot": "content",
+    "entries": [
+        {
+            "source": "index.md",
+            "target": "_index.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "about.md",
+            "target": "about.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "archive.md",
+            "target": "archive/_index.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "gallery.md",
+            "target": "gallery/_index.md",
+            "frontMatter": {}
+        },
+        {
+            "source": "posts/2025-06-15-welcome-to-fate.md",
+            "target": "posts/2025-06-15-welcome-to-fate.md",
+            "frontMatter": {
+                "slug": "welcome-to-fate"
+            }
+        },
+        {
+            "source": "posts/2025-07-02-doki-static-site-engine.md",
+            "target": "posts/2025-07-02-doki-static-site-engine.md",
+            "frontMatter": {
+                "slug": "doki-static-site-engine"
+            }
+        },
+        {
+            "source": "posts/2025-08-10-dejavu-template-language.md",
+            "target": "posts/2025-08-10-dejavu-template-language.md",
+            "frontMatter": {
+                "slug": "dejavu-template-language"
+            }
+        },
+        {
+            "source": "posts/2025-09-22-notedown-and-markdown.md",
+            "target": "posts/2025-09-22-notedown-and-markdown.md",
+            "frontMatter": {
+                "slug": "notedown-and-markdown"
+            }
+        },
+        {
+            "source": "posts/2025-10-05-cosplay-photo-set-1.md",
+            "target": "posts/2025-10-05-cosplay-photo-set-1.md",
+            "frontMatter": {
+                "slug": "cosplay-photo-set-1"
+            }
+        },
+        {
+            "source": "posts/2025-10-20-building-a-theme.md",
+            "target": "posts/2025-10-20-building-a-theme.md",
+            "frontMatter": {
+                "slug": "building-a-theme"
+            }
+        }
+    ]
+}

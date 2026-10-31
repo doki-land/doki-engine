@@ -1,10 +1,10 @@
 ---
 title: Dejavu 模板语言概览
 date: 2025-08-10
-slug: dejavu-template-language
 description: Dejavu 的语法、宏、继承和受控能力边界。为什么它只有一个 slot。
 tags: [技术, Dejavu]
 cover: assets/post-dejavu.jpg
+slug: dejavu-template-language
 ---
 
 ## 单 slot 设计

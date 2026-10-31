@@ -10,6 +10,7 @@
         "fmt": "biome format --write .",
         "check": "biome check .",
         "check:packed": "node scripts/check-packed-closure.mjs",
+        "examples:corpus:check": "node examples/scripts/project-corpus.mjs --check",
         "push": "wee test && git push",
         "reset": "git reset Head~ --soft"
     },

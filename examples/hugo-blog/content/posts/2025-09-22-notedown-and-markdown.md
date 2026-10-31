@@ -1,10 +1,10 @@
 ---
 title: Notedown 与 Markdown 语义
 date: 2025-09-22
-slug: notedown-and-markdown
 description: Notedown 如何在保持 Markdown 熟悉感的同时，提供结构化 IR 和可扩展的语义层。
 tags: [技术, Notedown]
 cover: assets/post-notedown.jpg
+slug: notedown-and-markdown
 ---
 
 ## 从"渲染器"到"语义层"

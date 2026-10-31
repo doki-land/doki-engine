@@ -1,9 +1,18 @@
 ---
 title: 相册
 date: 2025-10-28
+description: Fate 主题下的角色与静物摄影集。
 layout: gallery
-description: Fate 主题相册入口。蓝粉白紫，清透角色优先。
-tags: [home]
 ---
 
-本页面由 `gallery` 布局渲染，自动聚合所有标记为「相册」标签的文章。
+## 相册入口
+
+当前共有 1 辑，后续持续补充。
+
+- [Fate 风格主题摄影 · 第一辑](posts/cosplay-photo-set-1/) — 蓝粉白紫清透方向，角色优先。正式素材待上线。
+
+## 计划
+
+- 秋季外景（紫叶李 + 蓝调黄昏）
+- 静物与桌面 setup
+- 角色半身像补拍

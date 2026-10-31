@@ -1,10 +1,10 @@
 ---
 title: 构建 Fate 主题的思路笔记
 date: 2025-10-20
-slug: building-a-theme
 description: 从一张色卡到一个能用的博客主题，记录中间踩过的坑和取舍。
 tags: [技术, 主题]
 cover: assets/post-theme.jpg
+slug: building-a-theme
 ---
 
 ## 从设计稿到第一个 commit

@@ -1,10 +1,10 @@
 ---
 title: 欢迎新站点，介绍 Fate 视觉方向
 date: 2025-06-15
-slug: welcome-to-fate
 description: 新博客上线。聊聊 Fate 主题的视觉定位、主色选择与不做什么。
 tags: [meta, 介绍]
 cover: assets/post-welcome.jpg
+slug: welcome-to-fate
 ---
 
 ## 终于上线

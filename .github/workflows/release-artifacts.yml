@@ -57,6 +57,9 @@ jobs:
       - name: Tests
         run: pnpm run test:ts
 
+      - name: Corpus projection check
+        run: node examples/scripts/project-corpus.mjs --check
+
       - name: Build smoke
         run: pnpm run build:ts
 

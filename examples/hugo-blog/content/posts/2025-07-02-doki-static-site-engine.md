@@ -1,10 +1,10 @@
 ---
 title: Doki 静态站点引擎简介
 date: 2025-07-02
-slug: doki-static-site-engine
 description: Doki 是什么、它为什么又建在 Dejavu 之上，以及和常见静态站点生成器的差别。
 tags: [技术, Doki]
 cover: assets/post-doki.jpg
+slug: doki-static-site-engine
 ---
 
 ## Doki 是什么

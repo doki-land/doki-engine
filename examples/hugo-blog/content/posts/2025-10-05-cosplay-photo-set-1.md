@@ -1,10 +1,10 @@
 ---
 title: Fate 风格主题摄影 · 第一辑
 date: 2025-10-05
-slug: cosplay-photo-set-1
 description: 一组 Fate 视觉方向下的主题摄影，蓝粉白紫，清透优先。
 tags: [生活, 相册]
 cover: assets/album-01-cover.jpg
+slug: cosplay-photo-set-1
 ---
 
 ## 前言
