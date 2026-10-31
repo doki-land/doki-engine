@@ -1,15 +1,15 @@
 /** Doki Engine 主题系统 */
 
-import { readFile, readdir } from "fs/promises";
-import { existsSync } from "fs";
-import { join, resolve, isAbsolute } from "path";
+import { existsSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { isAbsolute, join, resolve } from "node:path";
 import { parse } from "smol-toml";
 import type { DokiConfig, ThemeConfig } from "./config.js";
 import {
-    discoverPackages,
-    resolvePackageName,
-    getPackagePath,
     type DiscoveredPackage,
+    discoverPackages,
+    getPackagePath,
+    resolvePackageName,
 } from "./npm.js";
 
 /** 主题清单 */
@@ -124,7 +124,7 @@ async function readTemplatesRecursively(
                 templates.set(relativePath, fullPath);
             }
         }
-    } catch (error) {
+    } catch (_error) {
         console.warn(`Failed to read templates directory: ${dir}`);
     }
 }
@@ -444,7 +444,7 @@ export async function findAvailableThemes(
                 }
             }
         }
-    } catch (error) {
+    } catch (_error) {
         console.warn(`Failed to read themes directory: ${themesDir}`);
     }
 
@@ -538,7 +538,7 @@ export class ThemeLoader {
                     templates.push(entry.name);
                 }
             }
-        } catch (error) {
+        } catch (_error) {
             console.warn(`Failed to list templates: ${templatesDir}`);
         }
 

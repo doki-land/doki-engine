@@ -14,7 +14,7 @@ class DokiPlayer extends HTMLElement {
 
     attributeChangedCallback(
         name: string,
-        oldValue: string | null,
+        _oldValue: string | null,
         newValue: string | null,
     ): void {
         if (name === "src" && newValue) {
@@ -188,7 +188,7 @@ class DokiPlayer extends HTMLElement {
             this.audio = null;
         }
 
-        this.audio = new Audio(this.currentSong!.src);
+        this.audio = new Audio(this.currentSong?.src);
         this.audio.addEventListener(
             "timeupdate",
             this.updateProgress.bind(this),

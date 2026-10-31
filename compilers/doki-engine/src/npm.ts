@@ -1,8 +1,8 @@
 /** Doki Engine NPM 包发现机制 */
 
-import { readdir, readFile } from "fs/promises";
-import { existsSync } from "fs";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 /** 包类型 */
 export type PackageType = "theme" | "plugin";
@@ -332,7 +332,7 @@ async function discoverScopedPackages(
                 packages.push(discovered);
             }
         }
-    } catch (error) {
+    } catch (_error) {
         console.warn(`Failed to read scoped packages: ${scopePath}`);
     }
 
@@ -378,7 +378,7 @@ async function discoverNormalPackages(
                 packages.push(discovered);
             }
         }
-    } catch (error) {
+    } catch (_error) {
         console.warn(`Failed to read normal packages: ${nodeModulesPath}`);
     }
 

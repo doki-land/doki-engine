@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { PluginManager, Plugin, HookContext, HookType } from "../src/plugin.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+    type HookContext,
+    type HookType,
+    type Plugin,
+    PluginManager,
+} from "../src/plugin.js";
 
 describe("PluginManager", () => {
     let manager: PluginManager;

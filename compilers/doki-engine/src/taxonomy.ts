@@ -1,7 +1,7 @@
 /** Doki Engine 分类法系统模块 */
 
-import { Content } from "./content.js";
-import { TaxonomyConfig } from "./config.js";
+import type { TaxonomyConfig } from "./config.js";
+import type { Content } from "./content.js";
 
 /** 分类项 */
 export interface TaxonomyTerm {
@@ -65,7 +65,7 @@ export function slugify(text: string): string {
         .trim()
         .toLowerCase()
         .replace(/\s+/g, "-")
-        .replace(/[^\p{L}\p{N}\-]/gu, "")
+        .replace(/[^\p{L}\p{N}-]/gu, "")
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
 }

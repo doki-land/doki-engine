@@ -1,7 +1,7 @@
-import { existsSync } from 'node:fs'
-import { createRequire } from 'node:module'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Load the N-API binding for Doki.
@@ -19,97 +19,99 @@ import { fileURLToPath } from 'node:url'
  */
 
 const PLATFORM_PACKAGES = {
-  'linux-x64': '@doki-land/doki-linux-x64',
-  'linux-arm64': '@doki-land/doki-linux-arm64',
-  'darwin-x64': '@doki-land/doki-darwin-x64',
-  'darwin-arm64': '@doki-land/doki-darwin-arm64',
-  'win32-x64': '@doki-land/doki-win32-x64',
-  'win32-arm64': '@doki-land/doki-win32-arm64',
-}
+    "linux-x64": "@doki-land/doki-linux-x64",
+    "linux-arm64": "@doki-land/doki-linux-arm64",
+    "darwin-x64": "@doki-land/doki-darwin-x64",
+    "darwin-arm64": "@doki-land/doki-darwin-arm64",
+    "win32-x64": "@doki-land/doki-win32-x64",
+    "win32-arm64": "@doki-land/doki-win32-arm64",
+};
 
-let cached
+let cached;
 
 export async function loadCore() {
-  if (cached) return cached
+    if (cached) return cached;
 
-  const here = path.dirname(fileURLToPath(import.meta.url))
-  const require = createRequire(import.meta.url)
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const require = createRequire(import.meta.url);
 
-  // 1. Env override
-  const override = process.env.DOKI_NATIVE_NODE
-  if (override) {
-    const resolved = path.isAbsolute(override) ? override : path.resolve(override)
-    if (existsSync(resolved)) {
-      cached = require(resolved)
-      _validate(cached)
-      return cached
+    // 1. Env override
+    const override = process.env.DOKI_NATIVE_NODE;
+    if (override) {
+        const resolved = path.isAbsolute(override)
+            ? override
+            : path.resolve(override);
+        if (existsSync(resolved)) {
+            cached = require(resolved);
+            _validate(cached);
+            return cached;
+        }
     }
-  }
 
-  // 2. Platform optional dependency package
-  const key = `${process.platform}-${process.arch}`
-  const pkg = PLATFORM_PACKAGES[key]
-  if (pkg) {
-    try {
-      const pkgJson = require.resolve(`${pkg}/package.json`)
-      const pkgDir = path.dirname(pkgJson)
-      const meta = require(pkgJson)
-      const addon = path.join(pkgDir, meta.main ?? 'index.node')
-      if (existsSync(addon)) {
-        cached = require(addon)
-        _validate(cached)
-        return cached
-      }
-    } catch {
-      // package not installed or no .node — fall through to local candidates
+    // 2. Platform optional dependency package
+    const key = `${process.platform}-${process.arch}`;
+    const pkg = PLATFORM_PACKAGES[key];
+    if (pkg) {
+        try {
+            const pkgJson = require.resolve(`${pkg}/package.json`);
+            const pkgDir = path.dirname(pkgJson);
+            const meta = require(pkgJson);
+            const addon = path.join(pkgDir, meta.main ?? "index.node");
+            if (existsSync(addon)) {
+                cached = require(addon);
+                _validate(cached);
+                return cached;
+            }
+        } catch {
+            // package not installed or no .node — fall through to local candidates
+        }
     }
-  }
 
-  // 3. Monorepo sibling build output
-  const candidates = [
-    path.resolve(here, '../../doki-core/index.js'),
-    path.resolve(here, '../native/index.cjs'),
-  ]
+    // 3. Monorepo sibling build output
+    const candidates = [
+        path.resolve(here, "../../doki-core/index.js"),
+        path.resolve(here, "../native/index.cjs"),
+    ];
 
-  let lastErr
-  for (const candidate of candidates) {
-    if (!existsSync(candidate)) continue
-    try {
-      cached = require(candidate)
-      _validate(cached)
-      return cached
-    } catch (err) {
-      lastErr = err
+    let _lastErr;
+    for (const candidate of candidates) {
+        if (!existsSync(candidate)) continue;
+        try {
+            cached = require(candidate);
+            _validate(cached);
+            return cached;
+        } catch (err) {
+            _lastErr = err;
+        }
     }
-  }
 
-  const supported = Object.keys(PLATFORM_PACKAGES).join(', ')
-  throw new Error(
-    `failed to load Doki native binding. Platform ${key} maps to ${pkg ?? '(not supported)'}. ` +
-      `Install the matching optional dep or set DOKI_NATIVE_NODE. ` +
-      `Supported: ${supported}. ` +
-      `Run: cd compilers/doki-node && npm run build`,
-  )
+    const supported = Object.keys(PLATFORM_PACKAGES).join(", ");
+    throw new Error(
+        `failed to load Doki native binding. Platform ${key} maps to ${pkg ?? "(not supported)"}. ` +
+            `Install the matching optional dep or set DOKI_NATIVE_NODE. ` +
+            `Supported: ${supported}. ` +
+            `Run: cd compilers/doki-node && npm run build`,
+    );
 }
 
 function _validate(mod) {
-  const required = [
-    'openProject',
-    'prepareBuild',
-    'continueBuild',
-    'commitBuild',
-    'setResolvedExtensions',
-    'explainRebuild',
-    'inspect',
-    'dispose',
-    'peekTheme',
-    'findThemeDefaults',
-  ]
-  for (const k of required) {
-    if (typeof mod[k] !== 'function') {
-      throw new Error(
-        `Doki native binding missing ${k}; rebuild with: cd compilers/doki-node && npm run build`,
-      )
+    const required = [
+        "openProject",
+        "prepareBuild",
+        "continueBuild",
+        "commitBuild",
+        "setResolvedExtensions",
+        "explainRebuild",
+        "inspect",
+        "dispose",
+        "peekTheme",
+        "findThemeDefaults",
+    ];
+    for (const k of required) {
+        if (typeof mod[k] !== "function") {
+            throw new Error(
+                `Doki native binding missing ${k}; rebuild with: cd compilers/doki-node && npm run build`,
+            );
+        }
     }
-  }
 }

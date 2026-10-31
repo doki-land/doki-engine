@@ -9,16 +9,16 @@
  * @returns {DokiPlugin}
  */
 export function definePlugin(plugin) {
-  if (!plugin || typeof plugin !== 'object') {
-    throw new TypeError('definePlugin expects a plugin object')
-  }
-  if (!plugin.id || typeof plugin.id !== 'string') {
-    throw new TypeError('definePlugin: `id` must be a non-empty string')
-  }
-  if (!plugin.hooks || typeof plugin.hooks !== 'object') {
-    throw new TypeError('definePlugin: `hooks` must be an object')
-  }
-  return plugin
+    if (!plugin || typeof plugin !== "object") {
+        throw new TypeError("definePlugin expects a plugin object");
+    }
+    if (!plugin.id || typeof plugin.id !== "string") {
+        throw new TypeError("definePlugin: `id` must be a non-empty string");
+    }
+    if (!plugin.hooks || typeof plugin.hooks !== "object") {
+        throw new TypeError("definePlugin: `hooks` must be an object");
+    }
+    return plugin;
 }
 
 /**
@@ -26,11 +26,11 @@ export function definePlugin(plugin) {
  * @returns {value is DokiPlugin}
  */
 export function isDokiPlugin(value) {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      typeof /** @type {DokiPlugin} */ (value).id === 'string' &&
-      /** @type {DokiPlugin} */ (value).hooks &&
-      typeof /** @type {DokiPlugin} */ (value).hooks === 'object',
-  )
+    return Boolean(
+        value &&
+            typeof value === "object" &&
+            typeof (/** @type {DokiPlugin} */ (value).id) === "string" &&
+            /** @type {DokiPlugin} */ (value).hooks &&
+            typeof (/** @type {DokiPlugin} */ (value).hooks) === "object",
+    );
 }

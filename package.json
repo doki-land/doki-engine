@@ -1,30 +1,29 @@
 {
-  "name": "doki-engine",
-  "private": true,
-  "packageManager": "pnpm@10.0.0",
-  "scripts": {
-    "build": "pnpm --filter @doki-land/* build",
-    "test": "pnpm --filter @doki-land/* test",
-    "test:ts": "vitest run",
-    "test:ts:watch": "vitest",
-    "fmt": "biome format --write .",
-    "check": "biome check .",
-    "check:packed": "node scripts/check-packed-closure.mjs",
-    "push": "wee test && git push",
-    "reset": "git reset Head~ --soft"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.8",
-    "biomejs": "^0.0.0",
-    "vitest": "^0.34.0"
-  },
-  "pnpm": {
-    "frozen-lockfile": false,
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "@parcel/watcher",
-      "@vscode/vsce-sign",
-      "keytar"
-    ]
-  }
+    "name": "doki-engine",
+    "private": true,
+    "packageManager": "pnpm@10.0.0",
+    "scripts": {
+        "build": "pnpm --filter @doki-land/* build",
+        "build:ts": "pnpm --filter @doki-land/doki-deploy --filter @doki-land/doki-migrate --filter @doki-land/doki-engine build",
+        "test": "pnpm --filter @doki-land/* test",
+        "test:ts": "pnpm --filter @doki-land/doki-deploy --filter @doki-land/doki-migrate test",
+        "fmt": "biome format --write .",
+        "check": "biome check .",
+        "check:packed": "node scripts/check-packed-closure.mjs",
+        "push": "wee test && git push",
+        "reset": "git reset Head~ --soft"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.8",
+        "biomejs": "^0.0.0",
+        "vitest": "^0.34.0"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "esbuild",
+            "@parcel/watcher",
+            "@vscode/vsce-sign",
+            "keytar"
+        ]
+    }
 }

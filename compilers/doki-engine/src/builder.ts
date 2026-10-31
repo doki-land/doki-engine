@@ -9,25 +9,25 @@
  */
 
 export interface BuildResult {
-  contentCount: number
-  outputDir?: string
-  [key: string]: unknown
+    contentCount: number;
+    outputDir?: string;
+    [key: string]: unknown;
 }
 
 const RETIRED = [
-  'The TypeScript Builder has been deleted as a build authority.',
-  'Use `@doki-land/doki` (`doki build`) which drives the Rust N-API kernel.',
-  'See 决策和进度表/doki-rust-build-kernel.md.',
-].join(' ')
+    "The TypeScript Builder has been deleted as a build authority.",
+    "Use `@doki-land/doki` (`doki build`) which drives the Rust N-API kernel.",
+    "See 决策和进度表/doki-rust-build-kernel.md.",
+].join(" ");
 
 /** @deprecated Use `@doki-land/doki` */
 export class Builder {
-  constructor() {
-    throw new Error(RETIRED)
-  }
+    constructor() {
+        throw new Error(RETIRED);
+    }
 }
 
 /** @deprecated Use `@doki-land/doki` */
 export async function buildSite(_root?: string): Promise<BuildResult> {
-  throw new Error(RETIRED)
+    throw new Error(RETIRED);
 }

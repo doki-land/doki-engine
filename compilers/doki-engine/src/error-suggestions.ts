@@ -4,8 +4,8 @@
  * 为各种错误类型提供具体的修复建议和帮助信息。
  */
 
-import { CliErrorCode } from "./error-codes.js";
 import type { ErrorSuggestion } from "./cli-errors.js";
+import { CliErrorCode } from "./error-codes.js";
 
 /**
  * 建议模板接口

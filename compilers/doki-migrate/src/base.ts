@@ -4,14 +4,14 @@
  * 提供内容迁移的基础抽象类和通用功能。
  */
 
-import { readdir, readFile, writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
-import { join, relative, dirname, extname } from "path";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, extname, join, relative } from "node:path";
 import {
+    type FrontmatterFormat,
+    normalizeFrontmatter,
     parseFrontmatter,
     toFrontmatter,
-    normalizeFrontmatter,
-    type FrontmatterFormat,
 } from "./frontmatter.js";
 import { convertTemplate, type TemplateEngine } from "./template.js";
 

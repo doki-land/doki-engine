@@ -4,8 +4,8 @@
  * 提供错误上下文提取、错误链追踪和相关错误处理功能。
  */
 
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { CliError, SourceContext, SourceRange } from "./cli-errors.js";
 
 /**
@@ -192,7 +192,7 @@ export function groupErrorsByFile(
                 label: filePath,
             });
         } else {
-            groups.get(filePath)!.related.push(error);
+            groups.get(filePath)?.related.push(error);
         }
     }
 
@@ -217,7 +217,7 @@ export function groupErrorsByType(
                 label: type,
             });
         } else {
-            groups.get(type)!.related.push(error);
+            groups.get(type)?.related.push(error);
         }
     }
 

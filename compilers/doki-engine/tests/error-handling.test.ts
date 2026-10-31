@@ -1,59 +1,45 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-    createCliError,
+    type CliError,
     configNotFoundError,
     configParseError,
-    templateParseError,
-    templateLoadError,
-    contentProcessError,
-    frontmatterError,
-    outputDirError,
-    fileNotFoundError,
-    directoryError,
-    buildError,
-    renderError,
-    serverStartError,
-    portInUseError,
-    browserOpenError,
-    formatCliError,
-    extractSourceContext,
+    createCliError,
     createErrorReport,
-    printErrorReportSummary,
-    type CliError,
-    type SourceContext,
     type ErrorSuggestion,
+    extractSourceContext,
+    formatCliError,
+    portInUseError,
+    templateParseError,
 } from "../src/cli-errors.js";
 import {
     CliErrorCode,
-    getErrorCodeMeta,
-    formatDescription,
-    isRecoverable,
-    getDocumentationUrl,
     ErrorCodeMeta,
     type ErrorSeverity,
+    formatDescription,
+    getDocumentationUrl,
+    getErrorCodeMeta,
+    isRecoverable,
 } from "../src/error-codes.js";
-import {
-    getSuggestions,
-    getSuggestionTemplate,
-    addCustomSuggestions,
-    QUICK_FIXES,
-    diagnoseError,
-    SUGGESTION_TEMPLATES,
-} from "../src/error-suggestions.js";
 import {
     buildErrorChain,
     collectErrorsFromChain,
-    getErrorChainDepth,
-    extractSourceContextFromSource,
-    groupErrorsByFile,
-    groupErrorsByType,
     createErrorSummary,
     ErrorContextEnhancer,
     extractDejavuErrorInfo,
+    extractSourceContextFromSource,
+    getErrorChainDepth,
+    groupErrorsByFile,
+    groupErrorsByType,
     isDejavuError,
-    type ErrorChainNode,
-    type DejavuErrorInfo,
 } from "../src/error-context.js";
+import {
+    addCustomSuggestions,
+    diagnoseError,
+    getSuggestions,
+    getSuggestionTemplate,
+    QUICK_FIXES,
+    SUGGESTION_TEMPLATES,
+} from "../src/error-suggestions.js";
 
 describe("Error Creation Functions", () => {
     describe("createCliError()", () => {
@@ -1019,8 +1005,8 @@ describe("Error Summary", () => {
             const summary = createErrorSummary(errors);
 
             expect(summary.total).toBe(3);
-            expect(summary.byType["config"]).toBe(2);
-            expect(summary.byType["template"]).toBe(1);
+            expect(summary.byType.config).toBe(2);
+            expect(summary.byType.template).toBe(1);
             expect(summary.byFile["/file1.toml"]).toBe(2);
             expect(summary.byFile["/file2.html"]).toBe(1);
         });

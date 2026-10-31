@@ -1,9 +1,9 @@
 /** 增量构建系统 */
 
-import { readFile, writeFile, existsSync, statSync } from "fs";
-import { promisify } from "util";
-import { join } from "path";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
+import { existsSync, readFile, statSync, writeFile } from "node:fs";
+import { join } from "node:path";
+import { promisify } from "node:util";
 
 const readFileAsync = promisify(readFile);
 const writeFileAsync = promisify(writeFile);

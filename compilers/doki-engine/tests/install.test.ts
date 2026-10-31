@@ -1,10 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
 import {
-    resolvePackageName,
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    rmSync,
+    writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
     getPackageShortName,
     parsePackageName,
+    resolvePackageName,
 } from "../src/npm.js";
 
 describe("install command", () => {
@@ -281,7 +287,7 @@ title = "My Site"
                 "@doki-land/plugin-search",
                 "@doki-land/plugin-seo",
             ];
-            const version = undefined;
+            const _version = undefined;
 
             const args = ["add", ...packageNames];
 

@@ -15,6 +15,6 @@
     "author": "Doki Engine Team",
     "license": "MIT",
     "devDependencies": {
-        "doki-engine": "file:../../frontends/doki-engine"
+        "@doki-land/doki": "workspace:*"
     }
 }

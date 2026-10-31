@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdir, writeFile, rm } from "fs/promises";
-import { join } from "path";
-import { loadData, getSupportedExtensions } from "../src/data";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getSupportedExtensions, loadData } from "../src/data";
 
 describe("Data File Loading", () => {
     let tempDir: string;
 
     beforeEach(async () => {
-        tempDir = join(process.cwd(), "temp-data-test-" + Date.now());
+        tempDir = join(process.cwd(), `temp-data-test-${Date.now()}`);
         await mkdir(tempDir, { recursive: true });
     });
 

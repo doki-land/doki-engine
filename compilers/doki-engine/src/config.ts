@@ -1,8 +1,8 @@
 /** Doki Engine 配置系统 */
 
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import { resolve, dirname } from "path";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { parse } from "smol-toml";
 
 /** 项目类型 */
@@ -419,8 +419,6 @@ export function getDefaultTaxonomies(
                 versions: {},
                 languages: {},
             };
-        case "wiki":
-        case "portfolio":
         default:
             return {};
     }

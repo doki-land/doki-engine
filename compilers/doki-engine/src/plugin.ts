@@ -8,40 +8,37 @@
 import type { BuildResult } from "./builder.js";
 
 export type HookType =
-  | "beforeBuild"
-  | "afterBuild"
-  | "transformContent"
-  | "generateContent";
+    | "beforeBuild"
+    | "afterBuild"
+    | "transformContent"
+    | "generateContent";
 
 export interface HookContext {
-  [key: string]: unknown
+    [key: string]: unknown;
 }
 
 export interface Plugin {
-  name: string
-  hooks?: Partial<Record<HookType, (ctx: HookContext) => unknown | Promise<unknown>>>
+    name: string;
+    hooks?: Partial<
+        Record<HookType, (ctx: HookContext) => unknown | Promise<unknown>>
+    >;
 }
 
 const RETIRED =
-  "PluginManager is retired. Use @doki-land/plugin with the Rust segmented build protocol via @doki-land/doki.";
+    "PluginManager is retired. Use @doki-land/plugin with the Rust segmented build protocol via @doki-land/doki.";
 
 /** @deprecated */
 export class PluginManager {
-  constructor() {
-    // Allow construction for leftover unit tests that only register/list;
-    // execution paths throw.
-  }
+    use(_plugin: Plugin): this {
+        throw new Error(RETIRED);
+    }
 
-  use(_plugin: Plugin): this {
-    throw new Error(RETIRED)
-  }
+    async run(_hook: HookType, _ctx: HookContext): Promise<void> {
+        throw new Error(RETIRED);
+    }
 
-  async run(_hook: HookType, _ctx: HookContext): Promise<void> {
-    throw new Error(RETIRED)
-  }
-
-  /** @deprecated */
-  async afterBuild(_result: BuildResult): Promise<void> {
-    throw new Error(RETIRED)
-  }
+    /** @deprecated */
+    async afterBuild(_result: BuildResult): Promise<void> {
+        throw new Error(RETIRED);
+    }
 }

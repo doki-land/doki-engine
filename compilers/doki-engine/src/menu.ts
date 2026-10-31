@@ -115,8 +115,8 @@ function findBestMatch(
         const normalizedMenuUrl = normalizeUrl(node.url);
         if (
             currentUrl === normalizedMenuUrl ||
-            currentUrl.startsWith(normalizedMenuUrl + "/") ||
-            currentUrl.startsWith(normalizedMenuUrl + "?")
+            currentUrl.startsWith(`${normalizedMenuUrl}/`) ||
+            currentUrl.startsWith(`${normalizedMenuUrl}?`)
         ) {
             currentMatchLength = normalizedMenuUrl.length;
 
@@ -174,7 +174,7 @@ function normalizeUrl(url: string): string {
         normalized = normalized.slice(0, -1);
     }
     if (!normalized.startsWith("/")) {
-        normalized = "/" + normalized;
+        normalized = `/${normalized}`;
     }
     return normalized;
 }

@@ -77,7 +77,7 @@ export function parsePermalinkPattern(
     }
 
     for (const [key, value] of Object.entries(context)) {
-        if (!placeholders.hasOwnProperty(key) && value !== undefined) {
+        if (!Object.hasOwn(placeholders, key) && value !== undefined) {
             const regex = new RegExp(`:${key}`, "g");
             result = result.replace(regex, value as string);
         }
@@ -110,7 +110,7 @@ function extractDateParts(dateStr: string | undefined): {
 
     const date = new Date(dateStr);
 
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
         const now = new Date();
         return {
             year: now.getFullYear().toString(),
@@ -205,11 +205,11 @@ export function generatePermalink(
         let url = customPermalink;
 
         if (!url.startsWith("/")) {
-            url = "/" + url;
+            url = `/${url}`;
         }
 
         if (config.trailingSlash && !url.endsWith("/")) {
-            url = url + "/";
+            url = `${url}/`;
         } else if (!config.trailingSlash && url.endsWith("/")) {
             url = url.slice(0, -1);
         }
@@ -222,11 +222,11 @@ export function generatePermalink(
     let url = parsePermalinkPattern(config.pattern, context);
 
     if (!url.startsWith("/")) {
-        url = "/" + url;
+        url = `/${url}`;
     }
 
     if (config.trailingSlash && !url.endsWith("/")) {
-        url = url + "/";
+        url = `${url}/`;
     } else if (!config.trailingSlash && url.endsWith("/")) {
         url = url.slice(0, -1);
     }
@@ -258,11 +258,13 @@ export function validatePermalinkPattern(pattern: string): boolean {
     const placeholderRegex = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
     let match: RegExpExecArray | null;
 
-    while ((match = placeholderRegex.exec(pattern)) !== null) {
+    match = placeholderRegex.exec(pattern);
+    while (match !== null) {
         const placeholder = match[1];
         if (!validPlaceholders.includes(placeholder)) {
             console.warn(`Unknown permalink placeholder: :${placeholder}`);
         }
+        match = placeholderRegex.exec(pattern);
     }
 
     return true;

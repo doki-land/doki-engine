@@ -1,9 +1,9 @@
-import * as vscode from "vscode";
 import {
-    DokiEngine,
-    DOKI_LANGUAGE,
     DEJAVU_LANGUAGE,
+    DOKI_LANGUAGE,
+    type DokiEngine,
 } from "@doki-land/doki-engine";
+import * as vscode from "vscode";
 
 /**
  * 渲染结果接口
@@ -227,7 +227,7 @@ export class PreviewProvider implements vscode.CustomTextEditorProvider {
      * @param renderResult 渲染结果
      */
     private updateWebview(
-        document: vscode.TextDocument,
+        _document: vscode.TextDocument,
         webview: vscode.Webview,
         renderResult: RenderResult,
     ): void {

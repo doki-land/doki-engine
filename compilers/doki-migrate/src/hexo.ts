@@ -6,14 +6,14 @@
 
 import {
     BaseMigrator,
+    type FileMigrateResult,
     type MigrateOptions,
     type MigrateResult,
-    type FileMigrateResult,
 } from "./base.js";
 import {
+    normalizeFrontmatter,
     parseFrontmatter,
     toFrontmatter,
-    normalizeFrontmatter,
 } from "./frontmatter.js";
 import { convertHexoTemplate } from "./template.js";
 
@@ -229,12 +229,12 @@ export class HexoMigrator extends BaseMigrator {
         }
 
         if (
-            Array.isArray(normalized["categories"]) &&
-            normalized["categories"].length > 0
+            Array.isArray(normalized.categories) &&
+            normalized.categories.length > 0
         ) {
-            const cats = normalized["categories"] as unknown[];
-            normalized["category"] = cats[cats.length - 1];
-            delete normalized["categories"];
+            const cats = normalized.categories as unknown[];
+            normalized.category = cats[cats.length - 1];
+            delete normalized.categories;
         }
 
         return normalized;

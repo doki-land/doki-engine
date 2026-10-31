@@ -10,47 +10,42 @@
  */
 
 export {
-  tryParseToIr,
-  walkIr,
-  extractTemplateFacts,
-  languageDelimiters,
-  type IrParseResult,
-  type IrTemplateFacts,
-  type IrBlockFact,
-} from "./ir";
-
-export {
-  scanTemplateRegions,
-  offsetInCodeRegion,
-  type Delimiters,
-  type TemplateRegion,
-  type TemplateRegionKind,
-} from "./scan";
-
-export {
-  classifyCodeHead,
-  type CodeHead,
-  type CodeHeadKind,
-} from "./heads";
-
-export {
-  analyzeTemplateSource,
-  buildParentChain,
-  mergeBlockOverrides,
-  emptyGraph,
-  type BlockDef,
-  type TemplateNode,
-  type TemplateGraph,
-} from "./graph";
-
-export {
-  detectCursorContext,
-  type CursorContext,
-  type CursorContextKind,
+    type CursorContext,
+    type CursorContextKind,
+    detectCursorContext,
 } from "./context";
-
 export {
-  collectStructuralDiagnostics,
-  diagnosticFromParseError,
-  type TemplateDiagnostic,
+    collectStructuralDiagnostics,
+    diagnosticFromParseError,
+    type TemplateDiagnostic,
 } from "./diagnostics";
+export {
+    analyzeTemplateSource,
+    type BlockDef,
+    buildParentChain,
+    emptyGraph,
+    mergeBlockOverrides,
+    type TemplateGraph,
+    type TemplateNode,
+} from "./graph";
+export {
+    type CodeHead,
+    type CodeHeadKind,
+    classifyCodeHead,
+} from "./heads";
+export {
+    extractTemplateFacts,
+    type IrBlockFact,
+    type IrParseResult,
+    type IrTemplateFacts,
+    languageDelimiters,
+    tryParseToIr,
+    walkIr,
+} from "./ir";
+export {
+    type Delimiters,
+    offsetInCodeRegion,
+    scanTemplateRegions,
+    type TemplateRegion,
+    type TemplateRegionKind,
+} from "./scan";

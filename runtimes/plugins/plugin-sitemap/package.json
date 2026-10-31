@@ -1,25 +1,28 @@
 {
-  "name": "@doki-land/doki-plugin-sitemap",
-  "version": "0.0.0",
-  "description": "Official sitemap contribution plugin (segmented hook protocol)",
-  "license": "MIT",
-  "type": "module",
-  "main": "./index.js",
-  "files": [
-    "index.js",
-    "doki.plugin.json"
-  ],
-  "doki": {
-    "kind": "plugin",
-    "apiVersion": "1",
-    "entry": "index.js",
-    "hooks": ["validateConfig", "contributeArtifacts"]
-  },
-  "dependencies": {
-    "@doki-land/doki-plugin": "workspace:*"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  }
+    "name": "@doki-land/doki-plugin-sitemap",
+    "version": "0.0.0",
+    "description": "Official sitemap contribution plugin (segmented hook protocol)",
+    "license": "MIT",
+    "type": "module",
+    "main": "./index.js",
+    "files": [
+        "index.js",
+        "doki.plugin.json"
+    ],
+    "doki": {
+        "kind": "plugin",
+        "apiVersion": "1",
+        "entry": "index.js",
+        "hooks": [
+            "validateConfig",
+            "contributeArtifacts"
+        ]
+    },
+    "dependencies": {
+        "@doki-land/doki-plugin": "workspace:*"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    }
 }

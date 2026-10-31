@@ -1,8 +1,8 @@
 /** Doki Engine 数据文件加载模块 */
 
-import { readdir, readFile } from "fs/promises";
-import { existsSync, statSync } from "fs";
-import { join, extname, relative, dirname, basename } from "path";
+import { existsSync, statSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, dirname, extname, join, relative } from "node:path";
 import { parse as parseToml } from "smol-toml";
 
 /** 支持的数据文件扩展名 */
@@ -279,7 +279,7 @@ export function watchDataDirectory(
 
     let debounceTimer: NodeJS.Timeout | null = null;
 
-    const { watch } = require("fs");
+    const { watch } = require("node:fs");
     const watcher = watch(
         dataDir,
         { recursive: true, persistent: false },
@@ -314,14 +314,21 @@ export function getSupportedExtensions(): readonly DataFileExtension[] {
 }
 
 /** 数据级联数据文件名称 */
-const CASCADE_DATA_FILENAMES = ["_data.json", "_data.yaml", "_data.yml", "_data.toml"];
+const CASCADE_DATA_FILENAMES = [
+    "_data.json",
+    "_data.yaml",
+    "_data.yml",
+    "_data.toml",
+];
 
 /**
  * 加载目录级数据文件
  * @param dir 目录路径
  * @returns 解析后的数据对象
  */
-export async function loadDirectoryData(dir: string): Promise<Record<string, unknown>> {
+export async function loadDirectoryData(
+    dir: string,
+): Promise<Record<string, unknown>> {
     for (const filename of CASCADE_DATA_FILENAMES) {
         const filePath = join(dir, filename);
         if (existsSync(filePath)) {
@@ -351,24 +358,27 @@ export async function buildDataCascade(
 ): Promise<Record<string, unknown>> {
     const contentDirNormalized = contentDir.replace(/\\/g, "/");
     const contentPathNormalized = contentPath.replace(/\\/g, "/");
-    
-    const relativePath = relative(contentDirNormalized, dirname(contentPathNormalized));
+
+    const relativePath = relative(
+        contentDirNormalized,
+        dirname(contentPathNormalized),
+    );
     const pathParts = relativePath.split(/[/\\]/).filter(Boolean);
-    
+
     const cascadeData: Record<string, unknown>[] = [];
-    
+
     let currentDir = contentDirNormalized;
     cascadeData.push(await loadDirectoryData(currentDir));
-    
+
     for (const part of pathParts) {
         currentDir = join(currentDir, part);
         cascadeData.push(await loadDirectoryData(currentDir));
     }
-    
+
     let result: Record<string, unknown> = {};
     for (const data of cascadeData) {
         result = deepMerge(result, data);
     }
-    
+
     return result;
 }

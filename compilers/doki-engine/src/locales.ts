@@ -9,9 +9,9 @@
  * - locales: 存放翻译文件的目录
  */
 
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
-import { resolve, basename, extname, dirname } from "path";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import type { DokiConfig, LanguageConfig } from "./config.js";
 
@@ -231,7 +231,7 @@ export class TranslationManager {
         params: Record<string, unknown>,
     ): string {
         return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
-            if (params.hasOwnProperty(key)) {
+            if (Object.hasOwn(params, key)) {
                 return String(params[key]);
             }
             return match;
@@ -376,14 +376,13 @@ export class LanguageResolver {
             const localized = this.parseFilename(
                 basename(content.relativePath),
             );
-            const key =
-                dirname(content.relativePath) + "/" + localized.baseName;
+            const key = `${dirname(content.relativePath)}/${localized.baseName}`;
 
             if (!translationMap.has(key)) {
                 translationMap.set(key, new Map());
             }
 
-            translationMap.get(key)!.set(localized.lang, content.path);
+            translationMap.get(key)?.set(localized.lang, content.path);
         }
 
         return translationMap;

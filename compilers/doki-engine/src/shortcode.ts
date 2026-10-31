@@ -212,13 +212,6 @@ export class ShortcodeRegistry {
  */
 export class ShortcodeParser {
     /**
-     * 创建短代码解析器实例
-     */
-    constructor() {
-        // 解析器不需要初始化状态
-    }
-
-    /**
      * 解析源文本中的所有短代码
      *
      * @param source 源文本
@@ -255,7 +248,8 @@ export class ShortcodeParser {
             /\{%\s*(\w+)\s*([^%]*)\s*%\}([\s\S]*?)\{%\s*end\1\s*%\}/g;
         let match: RegExpExecArray | null;
 
-        while ((match = blockPattern.exec(source)) !== null) {
+        match = blockPattern.exec(source);
+        while (match !== null) {
             const name = match[1];
             const paramString = match[2].trim();
             const content = match[3].trim();
@@ -269,6 +263,7 @@ export class ShortcodeParser {
                 startIndex: match.index,
                 endIndex: match.index + match[0].length,
             });
+            match = blockPattern.exec(source);
         }
 
         // 移除已解析的块级短代码，避免重复解析
@@ -290,19 +285,22 @@ export class ShortcodeParser {
         const pattern = /\{%\s*(\w+)\s+([^%]*)\s*%\}/g;
         let match: RegExpExecArray | null;
 
-        while ((match = pattern.exec(source)) !== null) {
+        match = pattern.exec(source);
+        while (match !== null) {
             // 跳过已被解析的块级短代码
             if (match[0].includes("\x00")) {
+                match = pattern.exec(source);
                 continue;
             }
 
             const name = match[1];
             const paramString = match[2].trim();
             const args = this.parseParams(paramString);
+            const matchIndex = match.index;
 
             // 检查是否已经作为块级短代码解析过
             const alreadyParsed = results.some(
-                (r) => r.startIndex === match!.index,
+                (r) => r.startIndex === matchIndex,
             );
 
             if (!alreadyParsed) {
@@ -311,10 +309,11 @@ export class ShortcodeParser {
                     args,
                     content: null,
                     isSelfClosing: true,
-                    startIndex: match.index,
-                    endIndex: match.index + match[0].length,
+                    startIndex: matchIndex,
+                    endIndex: matchIndex + match[0].length,
                 });
             }
+            match = pattern.exec(source);
         }
     }
 
@@ -337,10 +336,12 @@ export class ShortcodeParser {
             /(\w+)=("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s]+)/g;
         let match: RegExpExecArray | null;
 
-        while ((match = namedPattern.exec(paramString)) !== null) {
+        match = namedPattern.exec(paramString);
+        while (match !== null) {
             const name = match[1];
             const rawValue = match[2];
             named[name] = this.parseValue(rawValue);
+            match = namedPattern.exec(paramString);
         }
 
         // 移除已解析的命名参数，剩余的作为位置参数
@@ -348,8 +349,10 @@ export class ShortcodeParser {
         if (remaining) {
             const positionalPattern =
                 /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s]+)/g;
-            while ((match = positionalPattern.exec(remaining)) !== null) {
+            match = positionalPattern.exec(remaining);
+            while (match !== null) {
                 positional.push(this.parseValue(match[1]));
+                match = positionalPattern.exec(remaining);
             }
         }
 
@@ -383,7 +386,7 @@ export class ShortcodeParser {
 
         // 数字
         const num = Number(rawValue);
-        if (!isNaN(num)) {
+        if (!Number.isNaN(num)) {
             return num;
         }
 

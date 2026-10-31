@@ -6,14 +6,14 @@
  * via Language.template delimiters (see context.ts) without inventing grammar rules.
  */
 
-import { tryParseToIr } from "./ir";
 import type { Language } from "@doki-land/dejavu-engine";
+import { tryParseToIr } from "./ir";
 
 export type TemplateDiagnostic = {
-  message: string;
-  start: number;
-  end: number;
-  code: "parse_error";
+    message: string;
+    start: number;
+    end: number;
+    code: "parse_error";
 };
 
 /**
@@ -21,20 +21,26 @@ export type TemplateDiagnostic = {
  * Empty when source parses cleanly under the given Language.
  */
 export function collectStructuralDiagnostics(
-  source: string,
-  language?: Language | { asLanguage(): Language },
-  file = "template.dejavu",
+    source: string,
+    language?: Language | { asLanguage(): Language },
+    file = "template.dejavu",
 ): TemplateDiagnostic[] {
-  const parsed = tryParseToIr(source, language, file);
-  if (parsed.ok) return [];
-  return [diagnosticFromParseError(parsed.message, 0, Math.max(1, Math.min(source.length, 1)))];
+    const parsed = tryParseToIr(source, language, file);
+    if (parsed.ok) return [];
+    return [
+        diagnosticFromParseError(
+            parsed.message,
+            0,
+            Math.max(1, Math.min(source.length, 1)),
+        ),
+    ];
 }
 
 /** Wrap a parse failure (from parseToIr / checkTemplate) as a diagnostic. */
 export function diagnosticFromParseError(
-  message: string,
-  start = 0,
-  end = 1,
+    message: string,
+    start = 0,
+    end = 1,
 ): TemplateDiagnostic {
-  return { message, start, end, code: "parse_error" };
+    return { message, start, end, code: "parse_error" };
 }

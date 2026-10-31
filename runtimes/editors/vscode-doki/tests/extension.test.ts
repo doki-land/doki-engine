@@ -1,5 +1,5 @@
+import * as assert from "node:assert";
 import * as vscode from "vscode";
-import * as assert from "assert";
 
 suite("Extension Test Suite", () => {
     suiteSetup(async () => {
@@ -17,8 +17,8 @@ suite("Extension Test Suite", () => {
             "@doki-land.doki-vscode",
         );
         assert.ok(extension);
-        await extension!.activate();
-        assert.ok(extension!.isActive);
+        await extension?.activate();
+        assert.ok(extension?.isActive);
     });
 
     test("Doki language should be registered", async () => {

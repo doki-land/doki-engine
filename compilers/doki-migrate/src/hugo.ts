@@ -6,15 +6,15 @@
 
 import {
     BaseMigrator,
+    type FileMigrateResult,
     type MigrateOptions,
     type MigrateResult,
-    type FileMigrateResult,
 } from "./base.js";
 import {
-    parseTomlFrontmatter,
-    parseFrontmatter,
-    toFrontmatter,
     normalizeFrontmatter,
+    parseFrontmatter,
+    parseTomlFrontmatter,
+    toFrontmatter,
 } from "./frontmatter.js";
 import { convertHugoTemplate } from "./template.js";
 
@@ -209,13 +209,9 @@ export class HugoMigrator extends BaseMigrator {
             }
         }
 
-        if (Array.isArray(normalized["tags"])) {
-            normalized["tags"] = normalized["tags"];
-        }
-
-        if (Array.isArray(normalized["categories"])) {
-            normalized["category"] = normalized["categories"][0];
-            delete normalized["categories"];
+        if (Array.isArray(normalized.categories)) {
+            normalized.category = normalized.categories[0];
+            delete normalized.categories;
         }
 
         return normalized;

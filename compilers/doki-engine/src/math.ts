@@ -223,7 +223,6 @@ export function createMathRenderer(
     switch (config.engine) {
         case "mathjax":
             return new MathJaxRenderer(config);
-        case "katex":
         default:
             return new KatexRenderer(config);
     }
@@ -247,14 +246,15 @@ export function parseMathFormulas(
     const [blockStart, blockEnd] = config.blockDelimiters;
 
     const blockPattern = new RegExp(
-        escapeRegExp(blockStart) + "([\\s\\S]*?)" + escapeRegExp(blockEnd),
+        `${escapeRegExp(blockStart)}([\\s\\S]*?)${escapeRegExp(blockEnd)}`,
         "g",
     );
 
     let match: RegExpExecArray | null;
     const blockRanges: Array<{ start: number; end: number }> = [];
 
-    while ((match = blockPattern.exec(text)) !== null) {
+    match = blockPattern.exec(text);
+    while (match !== null) {
         const formula = match[1].trim();
         results.push({
             formula,
@@ -266,6 +266,7 @@ export function parseMathFormulas(
             start: match.index,
             end: match.index + match[0].length,
         });
+        match = blockPattern.exec(text);
     }
 
     const inlinePattern = new RegExp(
@@ -277,9 +278,11 @@ export function parseMathFormulas(
         "g",
     );
 
-    while ((match = inlinePattern.exec(text)) !== null) {
+    match = inlinePattern.exec(text);
+    while (match !== null) {
+        const matchIndex = match.index;
         const isInBlock = blockRanges.some(
-            (range) => match!.index >= range.start && match!.index < range.end,
+            (range) => matchIndex >= range.start && matchIndex < range.end,
         );
 
         if (!isInBlock) {
@@ -287,10 +290,11 @@ export function parseMathFormulas(
             results.push({
                 formula,
                 isBlock: false,
-                startIndex: match.index,
-                endIndex: match.index + match[0].length,
+                startIndex: matchIndex,
+                endIndex: matchIndex + match[0].length,
             });
         }
+        match = inlinePattern.exec(text);
     }
 
     results.sort((a, b) => a.startIndex - b.startIndex);

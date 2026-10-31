@@ -1,25 +1,25 @@
+import {
+    DEJAVU_LANGUAGE,
+    DOKI_LANGUAGE,
+    DokiEngine,
+} from "@doki-land/doki-engine";
 import * as vscode from "vscode";
 import {
     LanguageClient,
-    LanguageClientOptions,
-    ServerOptions,
+    type LanguageClientOptions,
+    type ServerOptions,
     TransportKind,
 } from "vscode-languageclient/node";
 import {
-    DokiEngine,
-    DOKI_LANGUAGE,
-    DEJAVU_LANGUAGE,
-} from "@doki-land/doki-engine";
+    DokiCompletionProvider,
+    DokiSignatureHelpProvider,
+} from "./completion";
 import {
     createDiagnosticsProvider,
     registerCodeActionProvider,
     registerFixAllCommand,
 } from "./diagnostics";
 import { PreviewProvider } from "./preview";
-import {
-    DokiCompletionProvider,
-    DokiSignatureHelpProvider,
-} from "./completion";
 
 let client: LanguageClient | undefined;
 
@@ -93,8 +93,8 @@ export class ConfigManager {
      */
     public static getConfig(): DokiConfig {
         return {
-            delimiters: this.getDelimitersConfig(),
-            build: this.getBuildConfig(),
+            delimiters: ConfigManager.getDelimitersConfig(),
+            build: ConfigManager.getBuildConfig(),
         };
     }
 
@@ -103,7 +103,9 @@ export class ConfigManager {
      * @returns 定界符配置对象
      */
     public static getDelimitersConfig(): DelimitersConfig {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
 
         return {
             codeStart: config.get<string>(
@@ -127,7 +129,9 @@ export class ConfigManager {
      * @returns 构建配置对象
      */
     public static getBuildConfig(): BuildConfig {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
 
         return {
             outputDir: config.get<string>("build.outputDir", "dist"),
@@ -140,7 +144,9 @@ export class ConfigManager {
      * @returns 代码块开始定界符
      */
     public static getCodeStartDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string>("template.delimiters.codeStart", "{%");
     }
 
@@ -149,7 +155,9 @@ export class ConfigManager {
      * @returns 代码块结束定界符
      */
     public static getCodeEndDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string>("template.delimiters.codeEnd", "%}");
     }
 
@@ -158,7 +166,9 @@ export class ConfigManager {
      * @returns 注释块开始定界符
      */
     public static getCommentStartDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string>("template.delimiters.commentStart", "{#");
     }
 
@@ -167,7 +177,9 @@ export class ConfigManager {
      * @returns 注释块结束定界符
      */
     public static getCommentEndDelimiter(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string>("template.delimiters.commentEnd", "#}");
     }
 
@@ -176,7 +188,9 @@ export class ConfigManager {
      * @returns 输出目录路径
      */
     public static getOutputDir(): string {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string>("build.outputDir", "dist");
     }
 
@@ -185,7 +199,9 @@ export class ConfigManager {
      * @returns 忽略文件列表
      */
     public static getIgnoreFiles(): string[] {
-        const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+        const config = vscode.workspace.getConfiguration(
+            ConfigManager.CONFIG_SECTION,
+        );
         return config.get<string[]>("build.ignoreFiles", []);
     }
 }
@@ -323,7 +339,7 @@ const ERROR_CONFIGS: Record<ErrorCode, ErrorCodeConfig> = {
  * @param errorCode 错误代码
  * @returns 文档链接 URL
  */
-function generateDocumentationUrl(errorCode: ErrorCode): string {
+function _generateDocumentationUrl(errorCode: ErrorCode): string {
     return `${DOCS_BASE_URL}/${errorCode}`;
 }
 
@@ -639,10 +655,10 @@ class ErrorTreeItem extends vscode.TreeItem {
  */
 class ErrorTreeDataProvider implements vscode.TreeDataProvider<ErrorTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<
-        ErrorTreeItem | undefined | null | void
-    > = new vscode.EventEmitter<ErrorTreeItem | undefined | null | void>();
+        ErrorTreeItem | undefined | null | undefined
+    > = new vscode.EventEmitter<ErrorTreeItem | undefined | null | undefined>();
     readonly onDidChangeTreeData: vscode.Event<
-        ErrorTreeItem | undefined | null | void
+        ErrorTreeItem | undefined | null | undefined
     > = this._onDidChangeTreeData.event;
 
     private errors: ErrorInfo[] = [];
@@ -745,20 +761,22 @@ function generateSuggestions(errorCode: ErrorCode, message: string): string[] {
             suggestions.push("检查开始和结束定界符数量是否匹配");
             suggestions.push("确认没有遗漏或多余的定界符");
             break;
-        case ErrorCode.UndefinedVariable:
+        case ErrorCode.UndefinedVariable: {
             const varMatch = message.match(/变量\s+(\w+)/);
             if (varMatch) {
                 suggestions.push(`使用 let ${varMatch[1]} = value 声明变量`);
             }
             suggestions.push("检查变量名是否拼写正确");
             break;
-        case ErrorCode.UndefinedFunction:
+        }
+        case ErrorCode.UndefinedFunction: {
             const funcMatch = message.match(/函数\s+(\w+)/);
             if (funcMatch) {
                 suggestions.push(`使用 micro ${funcMatch[1]}() 定义函数`);
             }
             suggestions.push("检查函数名是否拼写正确");
             break;
+        }
         case ErrorCode.TypeMismatch:
             suggestions.push("使用类型转换函数进行转换");
             suggestions.push("检查操作数类型是否兼容");
@@ -941,7 +959,7 @@ export function activate(context: vscode.ExtensionContext) {
                     new vscode.Range(position, position),
                     vscode.TextEditorRevealType.InCenter,
                 );
-            } catch (e) {
+            } catch (_e) {
                 vscode.window.showErrorMessage("无法打开文件位置");
             }
         },
@@ -1065,7 +1083,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
 
-        if (ast && ast.body) {
+        if (ast?.body) {
             for (const node of ast.body) {
                 traverse(node);
             }

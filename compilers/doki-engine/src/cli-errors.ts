@@ -7,9 +7,9 @@
 import chalk from "chalk";
 import {
     CliErrorCode,
-    ErrorSeverity,
-    getErrorCodeMeta,
+    type ErrorSeverity,
     formatDescription,
+    getErrorCodeMeta,
 } from "./error-codes.js";
 
 /**
@@ -224,7 +224,7 @@ export function formatCliError(error: CliError): string {
         const pointerLength = Math.max(1, ctx.endColumn - ctx.startColumn);
         const pointer = colorFn("^".repeat(pointerLength));
         lines.push(
-            chalk.gray("  " + " ".repeat(lineNumWidth) + " | ") +
+            chalk.gray(`  ${" ".repeat(lineNumWidth)} | `) +
                 pointerIndent +
                 pointer +
                 chalk.gray(` ${error.title}`),

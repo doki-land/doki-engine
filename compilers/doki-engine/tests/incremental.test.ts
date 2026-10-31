@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
 import {
-    IncrementalBuilder,
-    type BuildManifest,
-    type ChangeSet,
-    type FileRecord,
-} from "../src/incremental";
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    rmSync,
+    writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { IncrementalBuilder } from "../src/incremental";
 
 describe("IncrementalBuilder", () => {
     let tempDir: string;

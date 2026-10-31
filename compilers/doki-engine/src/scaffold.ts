@@ -1,14 +1,13 @@
 import {
-    mkdirSync,
     existsSync,
+    mkdirSync,
     readdirSync,
-    statSync,
     readFileSync,
+    statSync,
     writeFileSync,
-} from "fs";
-import { join, relative, basename } from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+} from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** 脚手架选项 */
 export interface ScaffoldOptions {

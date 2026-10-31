@@ -72,7 +72,7 @@ export function parseCodeMeta(meta: string): ParsedCodeMeta {
             result.lineNumbers = true;
         } else if (part.startsWith(":")) {
             const lineNum = parseInt(part.slice(1), 10);
-            if (!isNaN(lineNum) && lineNum > 0) {
+            if (!Number.isNaN(lineNum) && lineNum > 0) {
                 result.startLine = lineNum;
             }
         } else if (part.startsWith("{") && part.endsWith("}")) {
@@ -99,14 +99,19 @@ function parseLineSpec(spec: string): number[] {
             const [startStr, endStr] = trimmedRange.split("-");
             const start = parseInt(startStr.trim(), 10);
             const end = parseInt(endStr.trim(), 10);
-            if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start) {
+            if (
+                !Number.isNaN(start) &&
+                !Number.isNaN(end) &&
+                start > 0 &&
+                end >= start
+            ) {
                 for (let i = start; i <= end; i++) {
                     lines.push(i);
                 }
             }
         } else {
             const lineNum = parseInt(trimmedRange, 10);
-            if (!isNaN(lineNum) && lineNum > 0) {
+            if (!Number.isNaN(lineNum) && lineNum > 0) {
                 lines.push(lineNum);
             }
         }

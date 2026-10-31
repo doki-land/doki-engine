@@ -1,5 +1,5 @@
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Doki Deployer - 部署配置生成器

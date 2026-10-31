@@ -1,15 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+    type DeployConfigOptions,
+    generateDeployConfigContent,
+    generateGitHubActionsConfig,
     generateNetlifyConfig,
     generateVercelConfig,
-    generateGitHubActionsConfig,
+    getAllDeployTemplates,
     getConfigFilePath,
     getDeployTemplate,
-    generateDeployConfigContent,
     isPlatformSupported,
-    getAllDeployTemplates,
     SUPPORTED_PLATFORMS,
-    type DeployConfigOptions,
 } from "../src/index.js";
 
 describe("generateNetlifyConfig", () => {

@@ -4,8 +4,8 @@
  * 提供各种 frontmatter 格式之间的转换功能。
  */
 
-import * as TOML from "smol-toml";
 import matter from "gray-matter";
+import * as TOML from "smol-toml";
 
 /**
  * Frontmatter 格式类型
@@ -197,7 +197,6 @@ export function toFrontmatter(
             return toTomlFrontmatter(data, content);
         case "json":
             return toJsonFrontmatter(data, content);
-        case "yaml":
         default:
             return toYamlFrontmatter(data, content);
     }

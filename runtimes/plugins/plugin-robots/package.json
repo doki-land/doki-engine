@@ -1,21 +1,26 @@
 {
-  "name": "@doki-land/doki-plugin-robots",
-  "version": "0.0.0",
-  "description": "Official robots.txt contribution plugin",
-  "license": "MIT",
-  "type": "module",
-  "main": "./index.js",
-  "files": ["index.js", "doki.plugin.json"],
-  "doki": {
-    "kind": "plugin",
-    "apiVersion": "1",
-    "entry": "index.js",
-    "hooks": ["contributeArtifacts"]
-  },
-  "dependencies": {
-    "@doki-land/doki-plugin": "workspace:*"
-  },
-  "publishConfig": {
-    "access": "public"
-  }
+    "name": "@doki-land/doki-plugin-robots",
+    "version": "0.0.0",
+    "description": "Official robots.txt contribution plugin",
+    "license": "MIT",
+    "type": "module",
+    "main": "./index.js",
+    "files": [
+        "index.js",
+        "doki.plugin.json"
+    ],
+    "doki": {
+        "kind": "plugin",
+        "apiVersion": "1",
+        "entry": "index.js",
+        "hooks": [
+            "contributeArtifacts"
+        ]
+    },
+    "dependencies": {
+        "@doki-land/doki-plugin": "workspace:*"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
 }

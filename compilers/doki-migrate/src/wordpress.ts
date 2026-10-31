@@ -4,14 +4,14 @@
  * 将 WordPress 导出文件（WXR 格式）迁移到 Doki Engine 格式。
  */
 
+import { parseString } from "xml2js";
 import {
     BaseMigrator,
+    type FileMigrateResult,
     type MigrateOptions,
     type MigrateResult,
-    type FileMigrateResult,
 } from "./base.js";
 import { toFrontmatter } from "./frontmatter.js";
-import { parseString } from "xml2js";
 
 /**
  * WordPress 文章数据
@@ -271,7 +271,7 @@ export class WordPressMigrator extends BaseMigrator {
             post.modified = this.formatDate(postModified);
         }
 
-        const categories = item["category"] as XmlNode[] | undefined;
+        const categories = item.category as XmlNode[] | undefined;
         if (categories) {
             for (const cat of categories) {
                 const domain = cat.$?.domain || "";
@@ -312,7 +312,7 @@ export class WordPressMigrator extends BaseMigrator {
     private formatDate(dateStr: string): string {
         try {
             const date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
+            if (Number.isNaN(date.getTime())) {
                 return dateStr.split(" ")[0] || "";
             }
             return date.toISOString().split("T")[0];
@@ -393,31 +393,31 @@ export class WordPressMigrator extends BaseMigrator {
         };
 
         if (post.modified) {
-            frontmatter["updated"] = post.modified;
+            frontmatter.updated = post.modified;
         }
 
         if (post.author) {
-            frontmatter["author"] = post.author;
+            frontmatter.author = post.author;
         }
 
         if (post.excerpt) {
-            frontmatter["description"] = post.excerpt;
+            frontmatter.description = post.excerpt;
         }
 
         if (post.categories.length > 0) {
-            frontmatter["category"] = post.categories[0];
+            frontmatter.category = post.categories[0];
         }
 
         if (post.tags.length > 0) {
-            frontmatter["tags"] = post.tags;
+            frontmatter.tags = post.tags;
         }
 
         if (post.featuredImage) {
-            frontmatter["image"] = post.featuredImage;
+            frontmatter.image = post.featuredImage;
         }
 
         if (post.type === "page") {
-            frontmatter["layout"] = "page";
+            frontmatter.layout = "page";
         }
 
         return frontmatter;

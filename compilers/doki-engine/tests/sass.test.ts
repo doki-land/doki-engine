@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { isSassFile, getOutputPath } from "../src/sass.js";
+import { describe, expect, it } from "vitest";
 import type {
-    SassConfig,
-    SassCompileResult,
     SassCompileOptions,
+    SassCompileResult,
+    SassConfig,
 } from "../src/sass.js";
+import { getOutputPath, isSassFile } from "../src/sass.js";
 
 describe("isSassFile", () => {
     it("应该识别 .scss 文件", () => {

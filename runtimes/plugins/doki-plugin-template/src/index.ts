@@ -1,4 +1,4 @@
-import type { Plugin, HookContext, HookResult } from "@doki-land/doki-engine";
+import type { HookContext, HookResult, Plugin } from "@doki-land/doki-engine";
 
 export default {
     name: "{{name}}",
@@ -6,12 +6,12 @@ export default {
     description: "{{description}}",
 
     hooks: {
-        async onBeforeBuild(context: HookContext): Promise<HookResult> {
+        async onBeforeBuild(_context: HookContext): Promise<HookResult> {
             console.log("Building site...");
             return { continue: true };
         },
 
-        async onAfterBuild(context: HookContext): Promise<HookResult> {
+        async onAfterBuild(_context: HookContext): Promise<HookResult> {
             console.log("Build complete!");
             return { continue: true };
         },

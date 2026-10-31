@@ -1,15 +1,15 @@
 /** Doki Engine Markdown 处理模块 */
 
-import { marked } from "marked";
 import matter from "gray-matter";
-import {
-    ShortcodeParser,
-    ShortcodeRegistry,
-    type RenderContext,
-} from "./shortcode.js";
-import { highlightCode, parseCodeMeta } from "./highlight.js";
+import { marked } from "marked";
 import type { HighlightConfig, MathConfig } from "./config.js";
+import { highlightCode, parseCodeMeta } from "./highlight.js";
 import { createMathProcessor, DEFAULT_MATH_CONFIG } from "./math.js";
+import {
+    type RenderContext,
+    ShortcodeParser,
+    type ShortcodeRegistry,
+} from "./shortcode.js";
 
 /** Frontmatter 元数据 */
 export interface Frontmatter {

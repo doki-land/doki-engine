@@ -1,48 +1,48 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
-import chalk from "chalk";
-import { mkdirSync, writeFileSync, existsSync, rmSync } from "fs";
-import { join, resolve, relative, dirname } from "path";
-import { buildSite } from "./builder.js";
-import { loadConfig } from "./config.js";
-import { ArchetypeManager, generateSlug, formatDate } from "./archetype.js";
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import * as readline from "node:readline";
 import {
-    printCliError,
-    configNotFoundError,
-    templateParseError,
-    printSuccess,
-    printWarning,
-    printErrorReportSummary,
-    createErrorReport,
-    directoryError,
-    serverStartError,
+    type DeployConfigOptions,
+    type DeployPlatform,
+    generateDeployConfigContent,
+    getDeployTemplate,
+    isPlatformSupported,
+    SUPPORTED_PLATFORMS,
+} from "@doki-land/doki-deploy";
+import {
+    getSupportedMigrators,
+    type MigrateOptions,
+    type MigratorType,
+    migrate,
+} from "@doki-land/doki-migrate";
+import chalk from "chalk";
+import { Command } from "commander";
+import { ArchetypeManager, formatDate, generateSlug } from "./archetype.js";
+import { buildSite } from "./builder.js";
+import {
     browserOpenError,
     type CliError,
+    configNotFoundError,
+    createErrorReport,
+    directoryError,
+    printCliError,
+    printErrorReportSummary,
+    printSuccess,
+    printWarning,
+    serverStartError,
+    templateParseError,
 } from "./cli-errors.js";
+import { loadConfig } from "./config.js";
 import { DevServer, type DevServerOptions } from "./dev-server.js";
 import {
-    migrate,
-    getSupportedMigrators,
-    type MigratorType,
-    type MigrateOptions,
-} from "@doki-land/doki-migrate";
-import * as readline from "readline";
-import {
-    type DeployPlatform,
-    type DeployConfigOptions,
-    SUPPORTED_PLATFORMS,
-    getDeployTemplate,
-    generateDeployConfigContent,
-    isPlatformSupported,
-} from "@doki-land/doki-deploy";
-import { createTheme, createPlugin, type ScaffoldOptions } from "./scaffold.js";
-import { spawn } from "child_process";
-import {
-    resolvePackageName,
     discoverPackages,
     getPackageShortName,
+    resolvePackageName,
 } from "./npm.js";
+import { createPlugin, createTheme, type ScaffoldOptions } from "./scaffold.js";
 
 const VERSION = "0.1.0";
 
@@ -159,7 +159,7 @@ async function updateThemeConfig(packageName: string): Promise<void> {
     }
 
     try {
-        const content = await import("fs/promises").then((fs) =>
+        const content = await import("node:fs/promises").then((fs) =>
             fs.readFile(configPath, "utf-8"),
         );
         const shortName = getPackageShortName(packageName);
@@ -205,7 +205,7 @@ async function updateThemeConfig(packageName: string): Promise<void> {
         writeFileSync(configPath, newContent);
     } catch (error) {
         console.warn(
-            chalk.yellow("无法更新配置文件: " + (error as Error).message),
+            chalk.yellow(`无法更新配置文件: ${(error as Error).message}`),
         );
     }
 }
@@ -221,7 +221,7 @@ async function updatePluginConfig(pluginNames: string[]): Promise<void> {
     }
 
     try {
-        const content = await import("fs/promises").then((fs) =>
+        const content = await import("node:fs/promises").then((fs) =>
             fs.readFile(configPath, "utf-8"),
         );
         const shortNames = pluginNames.map(getPackageShortName);
@@ -280,7 +280,7 @@ async function updatePluginConfig(pluginNames: string[]): Promise<void> {
         writeFileSync(configPath, newContent);
     } catch (error) {
         console.warn(
-            chalk.yellow("无法更新配置文件: " + (error as Error).message),
+            chalk.yellow(`无法更新配置文件: ${(error as Error).message}`),
         );
     }
 }
@@ -701,7 +701,7 @@ program
                     try {
                         mkdirSync(fullPath, { recursive: true });
                         console.log(
-                            chalk.green("✓") + ` 创建目录: ${chalk.blue(dir)}`,
+                            `${chalk.green("✓")} 创建目录: ${chalk.blue(dir)}`,
                         );
                     } catch (error) {
                         printCliError(
@@ -711,7 +711,7 @@ program
                     }
                 } else if (!options.force) {
                     console.log(
-                        chalk.yellow("○") + ` 目录已存在: ${chalk.blue(dir)}`,
+                        `${chalk.yellow("○")} 目录已存在: ${chalk.blue(dir)}`,
                     );
                 }
             }
@@ -793,7 +793,7 @@ layout = "layout"
                 try {
                     writeFileSync(
                         packageJsonPath,
-                        JSON.stringify(packageJsonContent, null, 2) + "\n",
+                        `${JSON.stringify(packageJsonContent, null, 2)}\n`,
                     );
                     console.log(
                         chalk.green("✓") +
@@ -1030,13 +1030,13 @@ program
                 console.log();
                 console.log(
                     chalk.white("  处理文件: ") +
-                        chalk.blue(result.contentCount + " 个"),
+                        chalk.blue(`${result.contentCount} 个`),
                 );
                 console.log(
                     chalk.white("  输出目录: ") + chalk.blue(result.outputDir),
                 );
                 console.log(
-                    chalk.white("  构建耗时: ") + chalk.blue(elapsed + "ms"),
+                    chalk.white("  构建耗时: ") + chalk.blue(`${elapsed}ms`),
                 );
                 console.log();
                 console.log(
@@ -1188,7 +1188,7 @@ program
                             {
                                 type: "command",
                                 message: "使用其他端口",
-                                command: `doki dev -p ${parseInt(options.port) + 1}`,
+                                command: `doki dev -p ${parseInt(options.port, 10) + 1}`,
                             },
                             {
                                 type: "fix",
@@ -1410,12 +1410,12 @@ program
                 printCliError(configNotFoundError(options.config));
                 hasErrors = true;
             } else {
-                printSuccess("配置文件: " + chalk.blue(options.config));
+                printSuccess(`配置文件: ${chalk.blue(options.config)}`);
 
                 const config = await loadConfig(options.config);
-                printSuccess("站点标题: " + chalk.blue(config.site.title));
-                printSuccess("输入目录: " + chalk.blue(config.build.inputDir));
-                printSuccess("输出目录: " + chalk.blue(config.build.outputDir));
+                printSuccess(`站点标题: ${chalk.blue(config.site.title)}`);
+                printSuccess(`输入目录: ${chalk.blue(config.build.inputDir)}`);
+                printSuccess(`输出目录: ${chalk.blue(config.build.outputDir)}`);
 
                 if (!existsSync(config.build.inputDir)) {
                     printCliError({
@@ -1506,14 +1506,14 @@ program
             }
 
             if (!options.force) {
-                printWarning("即将删除目录: " + chalk.blue(outputDir));
+                printWarning(`即将删除目录: ${chalk.blue(outputDir)}`);
                 console.log(chalk.yellow("使用 --force 参数跳过确认"));
                 return;
             }
 
             try {
                 rmSync(outputDir, { recursive: true });
-                printSuccess("已清空输出目录: " + chalk.blue(outputDir));
+                printSuccess(`已清空输出目录: ${chalk.blue(outputDir)}`);
             } catch (error) {
                 printCliError({
                     type: "io",

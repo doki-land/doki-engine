@@ -6,14 +6,14 @@
 
 import {
     BaseMigrator,
+    type FileMigrateResult,
     type MigrateOptions,
     type MigrateResult,
-    type FileMigrateResult,
 } from "./base.js";
 import {
+    normalizeFrontmatter,
     parseFrontmatter,
     toFrontmatter,
-    normalizeFrontmatter,
 } from "./frontmatter.js";
 import { convertJekyllTemplate } from "./template.js";
 
@@ -274,22 +274,22 @@ export class JekyllMigrator extends BaseMigrator {
             }
         }
 
-        if (!normalized["date"]) {
+        if (!normalized.date) {
             const fileName = this.extractFileName(
                 this.getRelativePath(sourcePath, ""),
             );
             const dateMatch = fileName.match(/^(\d{4}-\d{2}-\d{2})/);
             if (dateMatch) {
-                normalized["date"] = dateMatch[1];
+                normalized.date = dateMatch[1];
             }
         }
 
         if (
-            Array.isArray(normalized["categories"]) &&
-            normalized["categories"].length > 0
+            Array.isArray(normalized.categories) &&
+            normalized.categories.length > 0
         ) {
-            normalized["category"] = normalized["categories"][0];
-            delete normalized["categories"];
+            normalized.category = normalized.categories[0];
+            delete normalized.categories;
         }
 
         return normalized;

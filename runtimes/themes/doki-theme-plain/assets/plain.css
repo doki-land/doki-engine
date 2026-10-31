@@ -1,35 +1,38 @@
 :root {
-  color-scheme: light;
-  --fg: #1a1a1a;
-  --muted: #5c5c5c;
-  --bg: #f7f5f1;
-  --accent: #0b6e4f;
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color-scheme: light;
+    --fg: #1a1a1a;
+    --muted: #5c5c5c;
+    --bg: #f7f5f1;
+    --accent: #0b6e4f;
+    font-family:
+        "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
 body {
-  margin: 0;
-  background: radial-gradient(1200px 600px at 10% -10%, #e8efe9, transparent), var(--bg);
-  color: var(--fg);
-  line-height: 1.6;
+    margin: 0;
+    background:
+        radial-gradient(1200px 600px at 10% -10%, #e8efe9, transparent),
+        var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
 }
 
 header,
 main,
 footer {
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 1.25rem 1rem;
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 1.25rem 1rem;
 }
 
 header a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 footer {
-  color: var(--muted);
-  border-top: 1px solid #ddd6cb;
+    color: var(--muted);
+    border-top: 1px solid #ddd6cb;
 }

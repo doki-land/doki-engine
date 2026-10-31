@@ -1,19 +1,17 @@
 /** Doki Engine 内容收集模块 */
 
-import { readdir, readFile } from "fs/promises";
-import { existsSync, mkdirSync, copyFileSync } from "fs";
-import { join, relative, dirname, basename } from "path";
-import {
-    parseMarkdown,
-    getPageVariables,
-    Frontmatter,
-    MarkdownParseOptions,
-} from "./markdown.js";
-import { LanguageResolver, LocalizedContent } from "./locales.js";
-import {
-    generatePermalink,
-} from "./permalink.js";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, dirname, join, relative } from "node:path";
 import type { PermalinkConfig } from "./config.js";
+import { LanguageResolver, type LocalizedContent } from "./locales.js";
+import {
+    type Frontmatter,
+    getPageVariables,
+    type MarkdownParseOptions,
+    parseMarkdown,
+} from "./markdown.js";
+import { generatePermalink } from "./permalink.js";
 
 /** 页面包类型 */
 export type BundleType = "leaf" | "branch" | "none";
@@ -141,16 +139,16 @@ function buildTranslationLinks(
 
     // 按基础名称分组
     for (const item of items) {
-        const key = dirname(item.relativePath) + "/" + item.baseName;
+        const key = `${dirname(item.relativePath)}/${item.baseName}`;
         if (!translationMap.has(key)) {
             translationMap.set(key, new Map());
         }
-        translationMap.get(key)!.set(item.lang, item);
+        translationMap.get(key)?.set(item.lang, item);
     }
 
     // 为每个内容项设置翻译链接
     for (const item of items) {
-        const key = dirname(item.relativePath) + "/" + item.baseName;
+        const key = `${dirname(item.relativePath)}/${item.baseName}`;
         const translations = translationMap.get(key);
         if (translations && translations.size > 1) {
             item.translations = new Map();
@@ -448,7 +446,7 @@ export function groupContentBySection(
         if (!groups.has(sectionPath)) {
             groups.set(sectionPath, []);
         }
-        groups.get(sectionPath)!.push(content);
+        groups.get(sectionPath)?.push(content);
     }
 
     return groups;

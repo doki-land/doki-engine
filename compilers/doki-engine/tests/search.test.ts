@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-    SearchIndexBuilder,
-    SearchIndexEntry,
-    extractPlainText,
-    simpleSegment,
-    createSegmenter,
-    generateSearchComponent,
-} from "../src/search.js";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { SearchConfig } from "../src/config.js";
 import type { Content } from "../src/content.js";
+import {
+    createSegmenter,
+    extractPlainText,
+    generateSearchComponent,
+    SearchIndexBuilder,
+    type SearchIndexEntry,
+    simpleSegment,
+} from "../src/search.js";
 
 describe("SearchIndexBuilder", () => {
     let builder: SearchIndexBuilder;

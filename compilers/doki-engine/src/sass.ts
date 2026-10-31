@@ -1,8 +1,8 @@
 /** Sass 编译模块 */
 
+import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join } from "node:path";
 import * as sass from "sass";
-import { writeFile, mkdir, readdir } from "fs/promises";
-import { dirname, join, basename, extname } from "path";
 import type { SassConfig } from "./config.js";
 
 /** Sass 编译结果 */

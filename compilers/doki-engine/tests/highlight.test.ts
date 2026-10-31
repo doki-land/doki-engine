@@ -1,16 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { HighlightConfig } from "../src/config.js";
 import {
     createHighlighter,
-    parseCodeMeta,
+    type HighlightOptions,
     highlightCode,
-    HighlightOptions,
-    ParsedCodeMeta,
+    parseCodeMeta,
 } from "../src/highlight.js";
-import type { HighlightConfig } from "../src/config.js";
 
 vi.mock("shiki", () => ({
     createHighlighter: vi.fn(async () => ({
-        codeToHtml: vi.fn(async (code: string, options: any) => {
+        codeToHtml: vi.fn(async (code: string, _options: any) => {
             return `<pre class="shiki" style="background-color: #1e1e1e"><code><span class="line"><span style="color: #d4d4d4">${escapeHtml(code)}</span></span></code></pre>`;
         }),
         getLoadedLanguages: vi.fn(() => [

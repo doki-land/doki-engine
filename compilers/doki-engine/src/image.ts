@@ -4,10 +4,10 @@
  * 提供图片信息提取、变体生成、缓存管理和响应式图片支持。
  */
 
-import { stat } from "fs/promises";
-import { existsSync } from "fs";
-import { join, basename, extname } from "path";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { stat } from "node:fs/promises";
+import { basename, extname, join } from "node:path";
 
 /** 支持的图片格式 */
 export type ImageFormat = "jpeg" | "png" | "webp" | "gif" | "svg";

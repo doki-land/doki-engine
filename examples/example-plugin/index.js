@@ -29,7 +29,7 @@ export default {
          * @param {import('doki-engine').HookContext} context - Hook 上下文
          * @returns {import('doki-engine').HookResult} Hook 结果
          */
-        onBeforeBuild: async (context) => {
+        onBeforeBuild: async (_context) => {
             console.log("[example-plugin] 构建开始...");
             const startTime = Date.now();
             return {
@@ -91,7 +91,7 @@ export default {
          * @param {import('doki-engine').HookContext} context - Hook 上下文
          * @returns {import('doki-engine').HookResult} Hook 结果
          */
-        onBeforeRender: async (context) => {
+        onBeforeRender: async (_context) => {
             return { continue: true };
         },
 
@@ -100,7 +100,7 @@ export default {
          * @param {import('doki-engine').HookContext} context - Hook 上下文
          * @returns {import('doki-engine').HookResult} Hook 结果
          */
-        onAfterRender: async (context) => {
+        onAfterRender: async (_context) => {
             return { continue: true };
         },
     },

@@ -133,7 +133,7 @@ const VARIABLES: VariableCompletion[] = [
 /**
  * 过滤器补全列表
  */
-const FILTERS: FilterCompletion[] = [
+const _FILTERS: FilterCompletion[] = [
     { label: "uppercase", doc: "转大写" },
     { label: "lowercase", doc: "转小写" },
     { label: "trim", doc: "去除首尾空白" },
@@ -270,8 +270,8 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(
         document: vscode.TextDocument,
         position: vscode.Position,
-        token: vscode.CancellationToken,
-        context: vscode.CompletionContext,
+        _token: vscode.CancellationToken,
+        _context: vscode.CompletionContext,
     ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
         const lineText = document.lineAt(position).text;
         const textBeforeCursor = lineText.substring(0, position.character);
@@ -360,26 +360,6 @@ export class DokiCompletionProvider implements vscode.CompletionItemProvider {
             return item;
         });
     }
-
-    /**
-     * 创建过滤器补全项
-     * @returns 补全项列表
-     */
-    private createFilterCompletions(): vscode.CompletionItem[] {
-        return FILTERS.map((filter) => {
-            const item = new vscode.CompletionItem(
-                filter.label,
-                vscode.CompletionItemKind.Function,
-            );
-            if (filter.snippet) {
-                item.insertText = new vscode.SnippetString(filter.snippet);
-            }
-            item.documentation = new vscode.MarkdownString(filter.doc);
-            item.detail = "Doki 过滤器";
-            item.sortText = `2_${filter.label}`;
-            return item;
-        });
-    }
 }
 
 /**
@@ -397,8 +377,8 @@ export class DokiSignatureHelpProvider implements vscode.SignatureHelpProvider {
     public provideSignatureHelp(
         document: vscode.TextDocument,
         position: vscode.Position,
-        token: vscode.CancellationToken,
-        context: vscode.SignatureHelpContext,
+        _token: vscode.CancellationToken,
+        _context: vscode.SignatureHelpContext,
     ): vscode.ProviderResult<vscode.SignatureHelp> {
         const lineText = document.lineAt(position).text;
         const textBeforeCursor = lineText.substring(0, position.character);

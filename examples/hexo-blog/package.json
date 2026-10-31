@@ -1,26 +1,26 @@
 {
-  "name": "hexo-blog",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Hexo Fate theme blog example",
-  "scripts": {
-    "preinstall": "node link-theme.cjs",
-    "postinstall": "node link-theme.cjs",
-    "clean": "npx hexo clean",
-    "generate": "npx hexo generate",
-    "server": "npx hexo server --debug",
-    "build": "npx hexo clean && npx hexo generate"
-  },
-  "hexo": {
-    "version": "7.3.0"
-  },
-  "dependencies": {
-    "hexo": "^7.3.0",
-    "hexo-cli": "^4.3.2",
-    "hexo-renderer-ejs": "^2.0.0",
-    "hexo-renderer-marked": "^7.0.0",
-    "hexo-generator-archive": "^2.0.0",
-    "hexo-generator-tag": "^2.0.0",
-    "hexo-generator-category": "^2.0.0"
-  }
+    "name": "hexo-blog",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Hexo Fate theme blog example",
+    "scripts": {
+        "preinstall": "node link-theme.cjs",
+        "postinstall": "node link-theme.cjs",
+        "clean": "npx hexo clean",
+        "generate": "npx hexo generate",
+        "server": "npx hexo server --debug",
+        "build": "npx hexo clean && npx hexo generate"
+    },
+    "hexo": {
+        "version": "7.3.0"
+    },
+    "dependencies": {
+        "hexo": "^7.3.0",
+        "hexo-cli": "^4.3.2",
+        "hexo-renderer-ejs": "^2.0.0",
+        "hexo-renderer-marked": "^7.0.0",
+        "hexo-generator-archive": "^2.0.0",
+        "hexo-generator-tag": "^2.0.0",
+        "hexo-generator-category": "^2.0.0"
+    }
 }

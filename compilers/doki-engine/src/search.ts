@@ -232,7 +232,7 @@ export class SearchIndexBuilder {
                 case "content":
                     entry.content = extractPlainText(content.html);
                     break;
-                case "description":
+                case "description": {
                     const desc =
                         content.frontmatter.description ||
                         content.frontmatter.summary ||
@@ -240,6 +240,7 @@ export class SearchIndexBuilder {
                     entry.description =
                         typeof desc === "string" ? desc : String(desc);
                     break;
+                }
                 case "tags":
                     if (content.frontmatter.tags) {
                         entry.tags = Array.isArray(content.frontmatter.tags)

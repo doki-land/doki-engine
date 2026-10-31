@@ -5,15 +5,19 @@
  * 支持文件监视、增量构建和浏览器自动刷新。
  */
 
-import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import {
     existsSync,
+    type FSWatcher,
+    watch as fsWatch,
     readFileSync,
     statSync,
-    watch as fsWatch,
-    type FSWatcher,
-} from "fs";
-import { join, relative, extname } from "path";
+} from "node:fs";
+import {
+    createServer,
+    type IncomingMessage,
+    type ServerResponse,
+} from "node:http";
+import { extname, join, relative } from "node:path";
 import chalk from "chalk";
 
 /** WebSocket 客户端 */
@@ -268,10 +272,10 @@ export class DevServer {
      */
     private injectHmrScript(content: string): string {
         if (content.includes("</head>")) {
-            return content.replace("</head>", HMR_CLIENT_SCRIPT + "</head>");
+            return content.replace("</head>", `${HMR_CLIENT_SCRIPT}</head>`);
         }
         if (content.includes("</body>")) {
-            return content.replace("</body>", HMR_CLIENT_SCRIPT + "</body>");
+            return content.replace("</body>", `${HMR_CLIENT_SCRIPT}</body>`);
         }
         return content + HMR_CLIENT_SCRIPT;
     }
@@ -342,10 +346,10 @@ export class DevServer {
      * 生成 WebSocket Accept Key
      */
     private generateAcceptKey(key: string): string {
-        const crypto = require("crypto");
+        const crypto = require("node:crypto");
         return crypto
             .createHash("sha1")
-            .update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+            .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
             .digest("base64");
     }
 

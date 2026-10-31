@@ -1,8 +1,8 @@
 {
-  "templates": "layouts",
-  "assets": "assets",
-  "layouts": {
-    "layout": "layout.dejavu",
-    "page": "layout.dejavu"
-  }
+    "templates": "layouts",
+    "assets": "assets",
+    "layouts": {
+        "layout": "layout.dejavu",
+        "page": "layout.dejavu"
+    }
 }

@@ -1,8 +1,8 @@
 /** Doki Engine 内容原型系统 */
 
-import { readFile } from "fs/promises";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { join, dirname } from "path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import matter from "gray-matter";
 
 /** 内容原型配置 */

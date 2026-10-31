@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { DokiEngine, DOKI_LANGUAGE } from "../src/engine";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { Content } from "../src/content";
+import { DOKI_LANGUAGE, DokiEngine } from "../src/engine";
+import { getPageVariables, parseMarkdown } from "../src/markdown";
+import { getPaginationUrl, paginate } from "../src/pagination";
 import {
-    extractTaxonomies,
     buildTaxonomyPages,
+    extractTaxonomies,
     getTaxonomyUrl,
 } from "../src/taxonomy";
-import { paginate, getPaginationUrl } from "../src/pagination";
-import { parseMarkdown, getPageVariables } from "../src/markdown";
-import type { Content } from "../src/content";
 
 describe("Doki Engine Template Syntax", () => {
     let engine: DokiEngine;
@@ -194,8 +194,7 @@ describe("Doki Language Configuration", () => {
         const engine = new DejavuEngine();
         // Explicit language arg — no setLanguage / mutable engine state.
         const ir = engine.parse("{% if true %}ok{% end if %}", DOKI_LANGUAGE);
-        const kids =
-            ir.body.type === "Template" ? ir.body.children : [ir.body];
+        const kids = ir.body.type === "Template" ? ir.body.children : [ir.body];
         expect(kids.some((n: { type: string }) => n.type === "Stmt.If")).toBe(
             true,
         );
@@ -204,9 +203,9 @@ describe("Doki Language Configuration", () => {
         const plain = engine.parse("{% if true %}ok{% end if %}");
         const plainKids =
             plain.body.type === "Template" ? plain.body.children : [plain.body];
-        expect(plainKids.every((n: { type: string }) => n.type === "Text")).toBe(
-            true,
-        );
+        expect(
+            plainKids.every((n: { type: string }) => n.type === "Text"),
+        ).toBe(true);
     });
 
     it("renderSource(source, ctx, DOKI_LANGUAGE) uses {% %} without setLanguage", async () => {

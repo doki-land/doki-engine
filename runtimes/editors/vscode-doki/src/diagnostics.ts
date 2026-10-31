@@ -1,9 +1,9 @@
-import * as vscode from "vscode";
 import {
-    DokiEngine,
-    DOKI_LANGUAGE,
     DEJAVU_LANGUAGE,
+    DOKI_LANGUAGE,
+    type DokiEngine,
 } from "@doki-land/doki-engine";
+import * as vscode from "vscode";
 
 /**
  * 诊断代码枚举
@@ -653,24 +653,30 @@ export class DiagnosticsProvider {
         let blockMatch: RegExpExecArray | null;
         const hits: Array<{ line: number; col: number; name: string }> = [];
 
-        while ((blockMatch = blockPattern.exec(content)) !== null) {
+        blockMatch = blockPattern.exec(content);
+        while (blockMatch !== null) {
             const blockText = blockMatch[1];
             const blockStart = blockMatch.index;
             const identifierPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
             let identMatch: RegExpExecArray | null;
-            while ((identMatch = identifierPattern.exec(blockText)) !== null) {
+            identMatch = identifierPattern.exec(blockText);
+            while (identMatch !== null) {
                 const lineNum =
-                    content.substring(0, blockStart + identMatch.index).split(
-                        "\n",
-                    ).length - 1;
+                    content
+                        .substring(0, blockStart + identMatch.index)
+                        .split("\n").length - 1;
                 const lineStart = content.lastIndexOf(
                     "\n",
                     blockStart + identMatch.index,
                 );
                 const col =
-                    blockStart + identMatch.index - (lineStart === -1 ? 0 : lineStart);
+                    blockStart +
+                    identMatch.index -
+                    (lineStart === -1 ? 0 : lineStart);
                 hits.push({ line: lineNum, col, name: identMatch[1] });
+                identMatch = identifierPattern.exec(blockText);
             }
+            blockMatch = blockPattern.exec(content);
         }
 
         for (const hit of hits) {
@@ -832,7 +838,8 @@ export class DiagnosticsProvider {
             let match: RegExpExecArray | null;
 
             callPattern.lastIndex = 0;
-            while ((match = callPattern.exec(line)) !== null) {
+            match = callPattern.exec(line);
+            while (match !== null) {
                 const funcName = match[1];
 
                 if (
@@ -861,6 +868,7 @@ export class DiagnosticsProvider {
                         ),
                     );
                 }
+                match = callPattern.exec(line);
             }
         }
 
@@ -1092,7 +1100,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
      */
     public provideCodeActions(
         document: vscode.TextDocument,
-        range: vscode.Range | vscode.Selection,
+        _range: vscode.Range | vscode.Selection,
         context: vscode.CodeActionContext,
         _token: vscode.CancellationToken,
     ): vscode.CodeAction[] {
@@ -1222,7 +1230,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
                             range.start.line,
                             0,
                         );
-                        edit.insert(document.uri, lineStart, insertText + "\n");
+                        edit.insert(document.uri, lineStart, `${insertText}\n`);
                     }
                 }
                 break;
@@ -1238,7 +1246,7 @@ export class DokiCodeActionProvider implements vscode.CodeActionProvider {
                             range.start.line,
                             0,
                         );
-                        edit.insert(document.uri, lineStart, insertText + "\n");
+                        edit.insert(document.uri, lineStart, `${insertText}\n`);
                     }
                 }
                 break;

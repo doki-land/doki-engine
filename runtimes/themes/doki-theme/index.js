@@ -8,11 +8,13 @@
  * @returns {DokiTheme}
  */
 export function defineTheme(theme) {
-  if (!theme || typeof theme !== 'object') {
-    throw new TypeError('defineTheme expects a theme object')
-  }
-  if (!theme.templates || typeof theme.templates !== 'string') {
-    throw new TypeError('defineTheme: `templates` must be a non-empty string path')
-  }
-  return theme
+    if (!theme || typeof theme !== "object") {
+        throw new TypeError("defineTheme expects a theme object");
+    }
+    if (!theme.templates || typeof theme.templates !== "string") {
+        throw new TypeError(
+            "defineTheme: `templates` must be a non-empty string path",
+        );
+    }
+    return theme;
 }

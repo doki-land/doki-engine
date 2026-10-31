@@ -1,16 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
-import { join } from "path";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-    parsePackageName,
-    resolvePackageName,
     checkVersionCompatibility,
-    loadPackageManifest,
+    discoverPackages,
     getPackagePath,
     getPackageShortName,
     isOfficialPackage,
-    discoverPackages,
-    type PackageType,
+    loadPackageManifest,
+    parsePackageName,
+    resolvePackageName,
 } from "../src/npm.js";
 
 describe("npm package discovery", () => {
