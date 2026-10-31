@@ -61,11 +61,12 @@ describe("Doki Engine TypeScript Implementation", () => {
 
     it("resolves relative include against the referring template", () => {
         const instance = new DokiEngine();
+        // `.doki` carries the Doki `{% %}` profile (extension decides).
         instance.registerTemplate(
-            "pages/child.html",
-            `{% include "./partials/head.html" %}OK`,
+            "pages/child.doki",
+            `{% include "./partials/head.doki" %}OK`,
         );
-        instance.registerTemplate("pages/partials/head.html", "H-");
+        instance.registerTemplate("pages/partials/head.doki", "H-");
         expect(instance.renderTemplate("pages/child")).toBe("H-OK");
     });
 

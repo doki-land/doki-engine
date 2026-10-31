@@ -35,12 +35,13 @@ export interface ScaffoldResult {
     error?: string;
 }
 
-const TEMPLATE_DIR = join(
+/** Repo-root `runtimes/` directory (same depth from `src/` and `dist/`). */
+const RUNTIMES_DIR = join(
     dirname(fileURLToPath(import.meta.url)),
     "..",
     "..",
     "..",
-    "packages",
+    "runtimes",
 );
 
 /**
@@ -49,7 +50,7 @@ const TEMPLATE_DIR = join(
  * @returns 模板目录路径
  */
 function getTemplateDir(type: "theme" | "plugin"): string {
-    return join(TEMPLATE_DIR, `${type}-template`);
+    return join(RUNTIMES_DIR, `${type}s`, `doki-${type}-template`);
 }
 
 /**

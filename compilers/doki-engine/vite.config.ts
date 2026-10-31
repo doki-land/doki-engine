@@ -22,7 +22,7 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                "@doki-land/dejavu-engine",
+                "@doki-land/dejavu",
                 "commander",
                 "chalk",
                 "figlet",
@@ -35,7 +35,7 @@ export default defineConfig({
             ],
             output: {
                 globals: {
-                    "@doki-land/dejavu-engine": "DejavuEngine",
+                    "@doki-land/dejavu": "Dejavu",
                     commander: "Commander",
                     chalk: "Chalk",
                     figlet: "Figlet",

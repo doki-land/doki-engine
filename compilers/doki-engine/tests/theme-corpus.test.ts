@@ -1,22 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-    DejavuEngine,
-    DejavuLanguage,
-    markSafe,
-} from "@doki-land/dejavu-engine";
 import { describe, expect, it } from "vitest";
-
-/** Doki product delimiters — belong in Doki, not upstream Dejavu. */
-const dokiLanguage = new DejavuLanguage().withTemplate({
-    codeStart: "{%",
-    codeEnd: "%}",
-    commentStart: "{#",
-    commentEnd: "#}",
-    supportFilterPipe: true,
-    legacyFor: false,
-});
+import { DokiEngine } from "../src/engine";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -36,16 +22,14 @@ const themeDirs = themeRelDirs
     .filter(({ dir }) => existsSync(dir));
 
 describe.skipIf(themeDirs.length === 0)(
-    "Doki theme corpus parses via host adapter",
+    "Doki theme corpus renders via the host engine",
     () => {
         for (const { rel, dir } of themeDirs) {
             it(rel, () => {
-                const eng = new DejavuEngine({ language: dokiLanguage });
+                const engine = new DokiEngine();
                 for (const f of readdirSync(dir)) {
                     if (!f.endsWith(".html")) continue;
-                    const src = readFileSync(join(dir, f), "utf8");
-                    eng.registerTemplate(f, src);
-                    eng.registerTemplate(f.replace(/\.html$/i, ""), src);
+                    engine.registerTemplate(f, readFileSync(join(dir, f), "utf8"));
                 }
                 const ctx = {
                     site: {
@@ -73,13 +57,14 @@ describe.skipIf(themeDirs.length === 0)(
                             excerpt: "ex",
                         },
                     ],
-                    content: markSafe("<p>hi</p>"),
+                    // Plain string; corpus templates emit `<% content |> safe %>`.
+                    content: "<p>hi</p>",
                     now: "2024-06-01T00:00:00.000Z",
                 };
                 let rendered = false;
                 for (const name of ["index", "page", "post", "layout"]) {
                     try {
-                        const out = eng.renderTemplate(name, ctx);
+                        const out = engine.renderTemplate(name, ctx);
                         expect(out.length).toBeGreaterThan(0);
                         rendered = true;
                         break;

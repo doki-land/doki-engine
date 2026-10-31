@@ -25,7 +25,7 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
-        "@doki-land/dejavu-engine": "0.0.0",
+        "@doki-land/dejavu": "0.0.17",
         "@doki-land/doki-deploy": "workspace:*",
         "@doki-land/doki-migrate": "workspace:*",
         "chalk": "^5.3.0",

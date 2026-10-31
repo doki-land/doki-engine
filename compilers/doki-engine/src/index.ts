@@ -1,4 +1,3 @@
-export { DejavuLanguage } from "@doki-land/dejavu-engine";
 export {
     type DeployConfigOptions,
     type DeployPlatform,

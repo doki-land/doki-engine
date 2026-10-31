@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="<% site.lang |> default: 'zh-CN' %>">
+<html lang="<% site.lang |> default('zh-CN') %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><% page.title |> default: site.title %></title>
-    <meta name="description" content="<% page.description |> default: site.description %>">
-    <meta name="author" content="<% page.author |> default: site.author %>">
+    <title><% page.title |> default(site.title) %></title>
+    <meta name="description" content="<% page.description |> default(site.description) %>">
+    <meta name="author" content="<% page.author |> default(site.author) %>">
     <link rel="stylesheet" href="/static/css/style.css">
     <% block head %><% end block %>
 </head>

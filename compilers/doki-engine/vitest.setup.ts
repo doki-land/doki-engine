@@ -1,1 +1,1 @@
-/** Vitest setup — Dejavu via `@doki-land/dejavu-engine` (TS today; Rust kernel target). */
+/** Vitest setup — Dejavu JIT via `@doki-land/dejavu` (Rust kernel behind N-API). */

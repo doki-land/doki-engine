@@ -36,9 +36,9 @@ importers:
 
   compilers/doki-engine:
     dependencies:
-      '@doki-land/dejavu-engine':
-        specifier: 0.0.0
-        version: 0.0.0
+      '@doki-land/dejavu':
+        specifier: 0.0.17
+        version: 0.0.17
       '@doki-land/doki-deploy':
         specifier: workspace:*
         version: link:../doki-deploy
@@ -559,8 +559,47 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
+  '@doki-land/dejavu-darwin-arm64@0.0.17':
+    resolution: {integrity: sha512-Ysq62tlr7Zof18oBH6a9pLyRoanux/kiqj62x7TOc7qKbgb3jEXv6A0vAFuRRkfAqQnOLAF9E4Q9nOi07g/FNA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@doki-land/dejavu-darwin-x64@0.0.17':
+    resolution: {integrity: sha512-DXli3irqU+f3g4T1jDpa4eZFR/lW1hL4P2TKHmEju+5FPJVZuPqJHHLzA6LLnIXZxhVvubNbi3ZcOkxdGUz0eQ==}
+    cpu: [x64]
+    os: [darwin]
+
   '@doki-land/dejavu-engine@0.0.0':
     resolution: {integrity: sha512-+m2BuF4FcPVn7yd606sDntMJLp2qYHUQwdmiyyqZKkrxvlH1PLX1LnMtqgMCOMz71cauNLjArUMQis5VUOOK8w==}
+    hasBin: true
+
+  '@doki-land/dejavu-engine@0.0.17':
+    resolution: {integrity: sha512-IhLXw0SENxu0+M+njIjLnZ1zv5FMW7N+U1zjSVhrTMS2Am1pq2YJ0FF3obxJXZoHXpUXWs5HwdGf53WtZzqvlA==}
+    engines: {node: '>=20'}
+
+  '@doki-land/dejavu-linux-arm64@0.0.17':
+    resolution: {integrity: sha512-YqnUS4zG0VucQpqX0164qgOiZXn/Y5Vp053Bzxy2sf4VO1p/1Irilie1XZ2gzpsverhKQvIeX8bY9mFcH/1IgA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@doki-land/dejavu-linux-x64@0.0.17':
+    resolution: {integrity: sha512-1/Hdw/iK6Y60P7TVtdpp//3u/SLZUbQccTE2qiSEuWtiETCAeKfbnFE1bvRbAtKIQZx8kkajYESEMBDFGpAGrA==}
+    cpu: [x64]
+    os: [linux]
+
+  '@doki-land/dejavu-win32-arm64@0.0.17':
+    resolution: {integrity: sha512-NBXUuF1lBOiB+b/2OwN9ZYXa9upDoIwfp1tRmx+Rt0di/oVz4mA4TGDc3WNZgG8PpgLShNB0uSA4Lf0feYJxlg==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@doki-land/dejavu-win32-x64@0.0.17':
+    resolution: {integrity: sha512-BzNuahRP9MSIbPc66Pr6CILkCT3cAumWXYUVot9MdPL4HWNequkbYys2ow3ISOquAKKEJYqmzsdy/jOcb0sYfQ==}
+    cpu: [x64]
+    os: [win32]
+
+  '@doki-land/dejavu@0.0.17':
+    resolution: {integrity: sha512-hxmffaH0tH0o5016nC16DMWRA0+xXmmxztXXpHfynb4rBIMOyBtHXpsxb2DQt+wh13Y+FdVtyjcxPbM4bNqXqQ==}
+    engines: {node: '>=22.18'}
     hasBin: true
 
   '@doki-land/doki-darwin-arm64@0.0.0':
@@ -2062,6 +2101,10 @@ packages:
 
   '@vitest/utils@4.1.0':
     resolution: {integrity: sha512-XfPXT6a8TZY3dcGY8EdwsBulFCIw+BeeX0RZn2x/BtiY/75YGh8FeWGG8QISN/WhaqSrE2OrlDgtF8q5uhOTmw==}
+
+  '@vmz/commander@0.3.12':
+    resolution: {integrity: sha512-Fs2CJZobP3K8qbpYF7yrHqmsBzG5/FMxAwITiiyJG0Aw4pQOlxW6mFTLwBkzjdwVi8/UIKfqiuntJSiKyPT5XQ==}
+    engines: {node: '>=20'}
 
   '@volar/language-core@2.4.28':
     resolution: {integrity: sha512-w4qhIJ8ZSitgLAkVay6AbcnC7gP3glYM3fYwKV3srj8m494E3xtrCv6E+bWviiK/8hs6e6t1ij1s2Endql7vzQ==}
@@ -5014,7 +5057,39 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
+  '@doki-land/dejavu-darwin-arm64@0.0.17':
+    optional: true
+
+  '@doki-land/dejavu-darwin-x64@0.0.17':
+    optional: true
+
   '@doki-land/dejavu-engine@0.0.0': {}
+
+  '@doki-land/dejavu-engine@0.0.17': {}
+
+  '@doki-land/dejavu-linux-arm64@0.0.17':
+    optional: true
+
+  '@doki-land/dejavu-linux-x64@0.0.17':
+    optional: true
+
+  '@doki-land/dejavu-win32-arm64@0.0.17':
+    optional: true
+
+  '@doki-land/dejavu-win32-x64@0.0.17':
+    optional: true
+
+  '@doki-land/dejavu@0.0.17':
+    dependencies:
+      '@doki-land/dejavu-engine': 0.0.17
+      '@vmz/commander': 0.3.12
+    optionalDependencies:
+      '@doki-land/dejavu-darwin-arm64': 0.0.17
+      '@doki-land/dejavu-darwin-x64': 0.0.17
+      '@doki-land/dejavu-linux-arm64': 0.0.17
+      '@doki-land/dejavu-linux-x64': 0.0.17
+      '@doki-land/dejavu-win32-arm64': 0.0.17
+      '@doki-land/dejavu-win32-x64': 0.0.17
 
   '@doki-land/doki-darwin-arm64@0.0.0':
     optional: true
@@ -5026,7 +5101,7 @@ snapshots:
 
   '@doki-land/doki-engine@file:compilers/doki-engine(@types/node@16.18.126)':
     dependencies:
-      '@doki-land/dejavu-engine': 0.0.0
+      '@doki-land/dejavu': 0.0.17
       '@doki-land/doki-deploy': file:compilers/doki-deploy
       '@doki-land/doki-migrate': file:compilers/doki-migrate
       chalk: 5.6.2
@@ -6356,6 +6431,8 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
     optional: true
+
+  '@vmz/commander@0.3.12': {}
 
   '@volar/language-core@2.4.28':
     dependencies:

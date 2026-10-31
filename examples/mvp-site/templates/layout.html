@@ -21,7 +21,7 @@
         <% block content %><% end block %>
     </main>
     <footer>
-        <p>&copy; <% now |> date: '%Y' %> <% site.title %></p>
+        <p>&copy; <% now |> date('%Y') %> <% site.title %></p>
     </footer>
 </body>
 </html>

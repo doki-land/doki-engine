@@ -144,17 +144,18 @@ describe("Doki Language Configuration", () => {
     });
 
     it("parse(source, DOKI_LANGUAGE) uses {% %} (not default <% %>)", async () => {
-        const { DejavuEngine } = await import("@doki-land/dejavu-engine");
-        const engine = new DejavuEngine();
-        // Explicit language arg — no setLanguage / mutable engine state.
-        const ir = engine.parse("{% if true %}ok{% end if %}", DOKI_LANGUAGE);
+        const { parse } = await import("@doki-land/dejavu");
+        // Explicit delimiters arg — no mutable engine state.
+        const ir = parse("{% if true %}ok{% end if %}", {
+            delimiters: JSON.stringify(DOKI_LANGUAGE),
+        });
         const kids = ir.body.type === "Template" ? ir.body.children : [ir.body];
         expect(kids.some((n: { type: string }) => n.type === "Stmt.If")).toBe(
             true,
         );
 
-        // Without language, default <% %> leaves {% %} as text.
-        const plain = engine.parse("{% if true %}ok{% end if %}");
+        // Without delimiters, default <% %> leaves {% %} as text.
+        const plain = parse("{% if true %}ok{% end if %}");
         const plainKids =
             plain.body.type === "Template" ? plain.body.children : [plain.body];
         expect(
@@ -162,18 +163,15 @@ describe("Doki Language Configuration", () => {
         ).toBe(true);
     });
 
-    it("renderSource(source, ctx, DOKI_LANGUAGE) uses {% %} without setLanguage", async () => {
-        const { DejavuEngine } = await import("@doki-land/dejavu-engine");
-        const engine = new DejavuEngine();
-        const out = engine.renderSource(
-            "Hi {% name %}!",
-            { name: "Doki" },
-            DOKI_LANGUAGE,
-        );
+    it("render(source, ctx, DOKI_LANGUAGE) uses {% %} without setLanguage", async () => {
+        const { render } = await import("@doki-land/dejavu");
+        const out = render("Hi {% name %}!", { name: "Doki" }, {
+            delimiters: JSON.stringify(DOKI_LANGUAGE),
+        });
         expect(out).toBe("Hi Doki!");
 
         // Default delimiters leave {% %} as literal text.
-        const plain = engine.renderSource("Hi {% name %}!", { name: "Doki" });
+        const plain = render("Hi {% name %}!", { name: "Doki" });
         expect(plain).toBe("Hi {% name %}!");
     });
 });

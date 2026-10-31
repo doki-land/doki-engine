@@ -9,12 +9,12 @@
             <a href="<% post.url %>"><% post.title %></a>
         </h3>
         <div class="post-card-meta">
-            <time datetime="<% post.date |> date: '%Y-%m-%d' %>">
-                <% post.date |> date: '%Y年%m月%d日' %>
+            <time datetime="<% post.date |> date('%Y-%m-%d') %>">
+                <% post.date |> date('%Y年%m月%d日') %>
             </time>
             <span class="post-card-author"><% post.author %></span>
         </div>
-        <p class="post-card-excerpt"><% post.description |> default: post.excerpt %></p>
+        <p class="post-card-excerpt"><% post.description |> default(post.excerpt) %></p>
         <% if post.tags %>
         <div class="post-card-tags">
             <% loop tag in post.tags %>
