@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use crate::config::{ExtensionRef, ProjectConfig};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
-use crate::site::SiteModel;
+use crate::site::{PageType, SiteModel};
 
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
@@ -108,13 +108,13 @@ pub fn render_page(
         site.page(&node.rel_path)
             .ok_or_else(|| CoreError::build(format!("no site page for `{}`", node.rel_path)))?;
     let content_html = markdown_to_html(&node.body, Some((site, node.rel_path.as_str())))?;
-    let layout_name = node
-        .front_matter
-        .layout
-        .as_deref()
-        .unwrap_or("layout");
-    let (layout_source, layout_id, layout_ext) =
-        resolve_layout(project_root, config.theme.as_ref(), theme_root, layout_name)?;
+    let (layout_source, layout_id, layout_ext) = resolve_layout(
+        project_root,
+        config.theme.as_ref(),
+        theme_root,
+        node.front_matter.layout.as_deref(),
+        page.page_type,
+    )?;
 
     let title = node
         .front_matter
@@ -262,51 +262,78 @@ fn rewrite_inlines(inlines: &mut [Inline], model: &SiteModel, from_rel: &str) {
     }
 }
 
+/// Layout name used for a page type (`home` / `post` / `page`).
+fn layout_name_for_type(page_type: PageType) -> &'static str {
+    match page_type {
+        PageType::Home => "home",
+        PageType::Post => "post",
+        PageType::Page => "page",
+    }
+}
+
+/// Resolve a layout by the model-driven precedence: front matter `layout`,
+/// then `layouts/<page.type>.<ext>`, then `layouts/layout.<ext>`, then builtin.
+///
+/// Every name is probed with the same extension order (`.doki`, `.dejavu`,
+/// `.dj`, `.html`), so a type layout can ship in any supported profile.
 fn resolve_layout(
     project_root: &Path,
     theme: Option<&ExtensionRef>,
     theme_root: Option<&Path>,
-    layout_name: &str,
+    front_matter_layout: Option<&str>,
+    page_type: PageType,
 ) -> CoreResult<(String, String, Option<String>)> {
-    let resolved_root = theme_root
-        .map(|p| p.to_path_buf())
-        .or_else(|| {
-            theme
-                .and_then(|t| t.path.as_ref())
-                .map(|path| project_root.join(path))
-        });
+    let resolved_root = theme_root.map(|p| p.to_path_buf()).or_else(|| {
+        theme
+            .and_then(|t| t.path.as_ref())
+            .map(|path| project_root.join(path))
+    });
+
+    let mut names: Vec<&str> = Vec::new();
+    if let Some(name) = front_matter_layout
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+    {
+        names.push(name);
+    }
+    for name in [layout_name_for_type(page_type), "layout"] {
+        if !names
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(name))
+        {
+            names.push(name);
+        }
+    }
 
     if let Some(theme_root) = resolved_root {
-        for candidate in layout_candidates(&theme_root, layout_name) {
-            if candidate.is_file() {
-                let source = std::fs::read_to_string(&candidate)
-                    .map_err(|source| CoreError::Io { source })?;
-                let rel = candidate
-                    .strip_prefix(project_root)
-                    .unwrap_or(&candidate)
-                    .to_string_lossy()
-                    .replace('\\', "/");
-                let ext = candidate
-                    .extension()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string());
-                return Ok((source, rel, ext));
+        for name in names {
+            for candidate in layout_candidates(&theme_root, name) {
+                if candidate.is_file() {
+                    let source = std::fs::read_to_string(&candidate)
+                        .map_err(|source| CoreError::Io { source })?;
+                    let rel = candidate
+                        .strip_prefix(project_root)
+                        .unwrap_or(&candidate)
+                        .to_string_lossy()
+                        .replace('\\', "/");
+                    let ext = candidate
+                        .extension()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string());
+                    return Ok((source, rel, ext));
+                }
             }
         }
     }
-    Ok((DEFAULT_LAYOUT.to_string(), format!("builtin:{layout_name}"), None))
+    Ok((DEFAULT_LAYOUT.to_string(), "builtin:layout".into(), None))
 }
 
 fn layout_candidates(theme_root: &Path, layout_name: &str) -> Vec<PathBuf> {
     let layouts = theme_root.join("layouts");
-    vec![
-        layouts.join(format!("{layout_name}.doki")),
-        layouts.join(format!("{layout_name}.dejavu")),
-        layouts.join(format!("{layout_name}.dj")),
-        layouts.join(format!("{layout_name}.html")),
-        theme_root.join(format!("layouts/{layout_name}.doki")),
-        theme_root.join(format!("layouts/{layout_name}.dejavu")),
-    ]
+    ["doki", "dejavu", "dj", "html"]
+        .into_iter()
+        .map(|ext| layouts.join(format!("{layout_name}.{ext}")))
+        .collect()
 }
 
 #[cfg(test)]
@@ -406,6 +433,99 @@ mod tests {
             page.html
         );
         assert!(page.layout_id.contains("themes/docs/layouts/layout.dejavu"));
+    }
+
+    #[test]
+    fn layout_precedence_prefers_front_matter_then_page_type_then_generic() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("layout.dejavu"),
+            "<generic><% title %></generic>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("page.dejavu"),
+            "<by-type><% title %></by-type>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("custom.dejavu"),
+            "<by-front-matter><% title %></by-front-matter>\n",
+        )
+        .unwrap();
+        let cfg = ProjectConfig {
+            title: "Site".into(),
+            theme: Some(crate::config::ExtensionRef {
+                path: Some("./themes/docs".into()),
+                package: None,
+            }),
+            ..ProjectConfig::default()
+        };
+
+        let about = node_from_md("about.md", "---\ntitle: About\n---\n\nx\n");
+        let site = site_of(&[about.clone()]);
+        let page = render_page(dir.path(), &cfg, None, &about, &site, false).unwrap();
+        assert!(
+            page.html.contains("<by-type>About</by-type>"),
+            "`page` type layout must win over the generic `layout` file, got: {}",
+            page.html
+        );
+        assert!(page.layout_id.ends_with("page.dejavu"));
+
+        let contact = node_from_md(
+            "contact.md",
+            "---\ntitle: Contact\nlayout: custom\n---\n\nx\n",
+        );
+        let site = site_of(&[contact.clone()]);
+        let page = render_page(dir.path(), &cfg, None, &contact, &site, false).unwrap();
+        assert!(
+            page.html
+                .contains("<by-front-matter>Contact</by-front-matter>"),
+            "front matter `layout` must win over the page type, got: {}",
+            page.html
+        );
+        assert!(page.layout_id.ends_with("custom.dejavu"));
+    }
+
+    #[test]
+    fn page_type_layout_uses_the_extension_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("home.doki"),
+            "<home-doki>{% title %}</home-doki>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("home.dejavu"),
+            "<home-dejavu><% title %></home-dejavu>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("layout.dejavu"),
+            "<generic><% title %></generic>\n",
+        )
+        .unwrap();
+        let cfg = ProjectConfig {
+            title: "Site".into(),
+            theme: Some(crate::config::ExtensionRef {
+                path: Some("./themes/docs".into()),
+                package: None,
+            }),
+            ..ProjectConfig::default()
+        };
+        let home = node_from_md("index.md", "---\ntitle: Home\n---\n\nx\n");
+        let site = site_of(&[home.clone()]);
+        let page = render_page(dir.path(), &cfg, None, &home, &site, false).unwrap();
+        assert!(
+            page.html.contains("<home-doki>Home</home-doki>"),
+            "`.doki` must win the extension order inside `home`, got: {}",
+            page.html
+        );
+        assert!(page.layout_id.ends_with("home.doki"));
     }
 
     #[test]

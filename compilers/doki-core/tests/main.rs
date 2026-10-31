@@ -8,7 +8,7 @@
 //! - when both catalogs ship side by side, each layout file renders with its
 //!   own extension-selected delimiters and failures name the layout.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use doki_core::{
     discover_markdown_content, language_for_ext, parse_document, render_page, ContentId,
@@ -271,6 +271,77 @@ fn markdown_links_rewrite_to_built_permalinks() {
         .unwrap();
     let page = render_page(dir.path(), &cfg, None, post, &site, false).unwrap();
     assert!(page.html.contains(r#"<a href="/pages/about.html">"#));
+}
+
+fn fate_examples_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples")
+}
+
+#[test]
+fn fate_home_and_archive_list_site_model_posts_without_markdown_lists() {
+    let examples = fate_examples_root();
+    let graph = discover_markdown_content(&examples.join("_shared-corpus"), "content")
+        .expect("shared corpus loads");
+    let (site, diagnostics) = SiteModel::build(&graph);
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let posts = site.posts(false);
+    assert_eq!(
+        posts.len(),
+        6,
+        "the shared corpus ships six published posts"
+    );
+
+    let theme = examples.join("doki-theme-fate");
+    let cfg = ProjectConfig {
+        title: "Fate · 清透角色的笔记".into(),
+        description: Some("Notes, images, and small observations.".into()),
+        author: Some("Fate".into()),
+        lang: "zh-CN".into(),
+        ..ProjectConfig::default()
+    };
+
+    for (rel, layout_file) in [
+        ("index.md", "home.dejavu"),
+        ("archive.md", "archive.dejavu"),
+    ] {
+        let node = graph
+            .nodes
+            .get(&ContentId(rel.into()))
+            .unwrap_or_else(|| panic!("`{rel}` must exist in the shared corpus"));
+        let page = render_page(&examples, &cfg, Some(&theme), node, &site, false)
+            .expect("fate layout renders");
+        assert!(
+            page.layout_id.ends_with(layout_file),
+            "`{rel}` should resolve to `{layout_file}`, got: {}",
+            page.layout_id
+        );
+        assert!(
+            page.html
+                .contains(r#"href="/pages/posts/2025-10-20-building-a-theme.html""#),
+            "`{rel}` should link the newest post by its site-model URL, got: {}",
+            page.html
+        );
+        assert!(
+            !page.html.contains("posts/building-a-theme/"),
+            "authored route links must come from the site model, not Markdown, got: {}",
+            page.html
+        );
+        for post in &posts {
+            let href = format!(r#"href="{}""#, post.url);
+            assert!(
+                page.html.contains(&href),
+                "`{rel}` is missing site-model post link `{href}`, got: {}",
+                page.html
+            );
+        }
+        let link_count = page.html.matches(r#"href="/pages/posts/"#).count();
+        assert_eq!(
+            link_count,
+            posts.len(),
+            "`{rel}` should render exactly one link per published post, got: {}",
+            page.html
+        );
+    }
 }
 
 #[test]
