@@ -6,7 +6,7 @@
  * via Language.template delimiters (see context.ts) without inventing grammar rules.
  */
 
-import { tryParseToIr, type TemplateLanguage } from "./ir";
+import { type TemplateLanguage, tryParseToIr } from "./ir";
 
 export type TemplateDiagnostic = {
     message: string;

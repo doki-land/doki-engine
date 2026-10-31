@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
     DEFAULT_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 function parse(source: string) {
@@ -80,9 +80,7 @@ describe("模板继承语法测试", () => {
                 (n) => n.type === "Stmt.Extends",
             );
             expect(extendsStmt).toBeDefined();
-            const blocks = children(doc).filter(
-                (n) => n.type === "Stmt.Block",
-            );
+            const blocks = children(doc).filter((n) => n.type === "Stmt.Block");
             expect(blocks.length).toBeGreaterThanOrEqual(2);
         });
     });

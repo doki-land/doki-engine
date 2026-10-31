@@ -7,7 +7,7 @@
  */
 
 import { type CodeHeadKind, classifyCodeHead } from "./heads";
-import { tryParseToIr, type TemplateLanguage, walkIr } from "./ir";
+import { type TemplateLanguage, tryParseToIr, walkIr } from "./ir";
 import {
     type Delimiters,
     offsetInCodeRegion,

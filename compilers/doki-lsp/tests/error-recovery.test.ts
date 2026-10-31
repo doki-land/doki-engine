@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 describe("Error Recovery Tests", () => {
@@ -85,9 +85,7 @@ describe("Error Recovery Tests", () => {
 
     describe("Valid Content After Error", () => {
         it("should throw on incomplete content", () => {
-            expect(() =>
-                parse("{% if true %}ok{% end if %}{% if "),
-            ).toThrow();
+            expect(() => parse("{% if true %}ok{% end if %}{% if ")).toThrow();
         });
 
         it("should parse multiple valid statements", () => {

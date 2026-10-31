@@ -3,8 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     DEFAULT_LANGUAGE,
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 describe("Completion Provider Tests", () => {
@@ -350,18 +350,14 @@ describe("Completion Provider Tests", () => {
             const content = "{% if show %}yes{% end if %}";
             const doc = parseTemplate(content, DOKI_LANGUAGE);
             expect(doc.body.type).toBe("Template");
-            expect(
-                children(doc).some((n) => n.type === "Stmt.If"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Stmt.If")).toBe(true);
         });
 
         it("should parse dejavu syntax", () => {
             const content = "<% if show %>yes<% end if %>";
             const doc = parseTemplate(content, DEFAULT_LANGUAGE);
             expect(doc.body.type).toBe("Template");
-            expect(
-                children(doc).some((n) => n.type === "Stmt.If"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Stmt.If")).toBe(true);
         });
     });
 });

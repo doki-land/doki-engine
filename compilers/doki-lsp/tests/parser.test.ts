@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
     DEFAULT_LANGUAGE,
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 function parse(source: string, language = DEFAULT_LANGUAGE) {
@@ -22,9 +22,7 @@ describe("Doki LSP Parser Integration", () => {
             const expr = children(doc).find((n) => n.type === "Interpolation");
             expect(expr).toBeDefined();
             expect(
-                expr &&
-                    expr.type === "Interpolation" &&
-                    expr.expression.type,
+                expr && expr.type === "Interpolation" && expr.expression.type,
             ).toBe("Expr.Binary");
         });
 
@@ -33,9 +31,7 @@ describe("Doki LSP Parser Integration", () => {
             expect(doc.body.type).toBe("Template");
             const expr = children(doc).find((n) => n.type === "Interpolation");
             expect(
-                expr &&
-                    expr.type === "Interpolation" &&
-                    expr.expression.type,
+                expr && expr.type === "Interpolation" && expr.expression.type,
             ).toBe("Expr.Call");
         });
 
@@ -56,9 +52,9 @@ describe("Doki LSP Parser Integration", () => {
             const doc = parse("Hello <% name %>!");
             expect(doc.body.type).toBe("Template");
             expect(children(doc).some((n) => n.type === "Text")).toBe(true);
-            expect(
-                children(doc).some((n) => n.type === "Interpolation"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Interpolation")).toBe(
+                true,
+            );
         });
     });
 });
@@ -73,9 +69,7 @@ Positive
 `;
             const doc = parse(source);
             expect(doc.body.type).toBe("Template");
-            expect(
-                children(doc).some((n) => n.type === "Stmt.If"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Stmt.If")).toBe(true);
         });
 
         it("should parse if-else statement", () => {
@@ -156,9 +150,9 @@ describe("Parser Direct Usage", () => {
         const source = "{% name %}";
         const doc = parse(source, DOKI_LANGUAGE);
         expect(doc.body.type).toBe("Template");
-        expect(
-            children(doc).some((n) => n.type === "Interpolation"),
-        ).toBe(true);
+        expect(children(doc).some((n) => n.type === "Interpolation")).toBe(
+            true,
+        );
     });
 
     it("should reject single-pipe filter syntax", () => {

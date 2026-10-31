@@ -4,8 +4,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     DEFAULT_LANGUAGE,
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 describe("LSP Core Functionality", () => {
@@ -55,9 +55,7 @@ Positive
 {% end if %}`;
             const doc = parse(content, DOKI_LANGUAGE);
             expect(doc.body.type).toBe("Template");
-            expect(
-                children(doc).some((n) => n.type === "Stmt.If"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Stmt.If")).toBe(true);
         });
 
         it("should parse dejavu syntax", () => {
@@ -66,9 +64,7 @@ Positive
 <% end if %>`;
             const doc = parse(content, DEFAULT_LANGUAGE);
             expect(doc.body.type).toBe("Template");
-            expect(
-                children(doc).some((n) => n.type === "Stmt.If"),
-            ).toBe(true);
+            expect(children(doc).some((n) => n.type === "Stmt.If")).toBe(true);
         });
     });
 

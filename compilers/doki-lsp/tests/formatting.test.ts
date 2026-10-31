@@ -3,8 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     DEFAULT_LANGUAGE,
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 function children(doc: { body: IrNode }): IrNode[] {

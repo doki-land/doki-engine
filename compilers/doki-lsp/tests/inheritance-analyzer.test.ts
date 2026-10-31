@@ -3,8 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     DEFAULT_LANGUAGE,
     DOKI_LANGUAGE,
-    parseTemplate,
     type IrNode,
+    parseTemplate,
 } from "../src/template/index";
 
 function children(doc: { body: IrNode }): IrNode[] {
@@ -98,11 +98,11 @@ describe("Template Inheritance Analyzer Tests", () => {
         });
 
         it("should parse multiple blocks", () => {
-            const doc = parse(`{% block header %}Header{% end block %}{% block content %}Content{% end block %}{% block footer %}Footer{% end block %}`);
-
-            const blocks = children(doc).filter(
-                (n) => n.type === "Stmt.Block",
+            const doc = parse(
+                `{% block header %}Header{% end block %}{% block content %}Content{% end block %}{% block footer %}Footer{% end block %}`,
             );
+
+            const blocks = children(doc).filter((n) => n.type === "Stmt.Block");
             expect(blocks.length).toBe(3);
         });
     });
@@ -130,16 +130,16 @@ describe("Template Inheritance Analyzer Tests", () => {
 
     describe("Complete Template Inheritance", () => {
         it("should parse complete inheritance template", () => {
-            const doc = parse(`{% extends "base.html" %}{% block title %}My Page{% end block %}{% block content %}<h1>Welcome</h1><p>This is my page.</p>{% end block %}`);
+            const doc = parse(
+                `{% extends "base.html" %}{% block title %}My Page{% end block %}{% block content %}<h1>Welcome</h1><p>This is my page.</p>{% end block %}`,
+            );
 
             const extendsStmt = children(doc).find(
                 (n) => n.type === "Stmt.Extends",
             );
             expect(extendsStmt).toBeDefined();
 
-            const blocks = children(doc).filter(
-                (n) => n.type === "Stmt.Block",
-            );
+            const blocks = children(doc).filter((n) => n.type === "Stmt.Block");
             expect(blocks.length).toBeGreaterThanOrEqual(2);
         });
 
@@ -218,16 +218,12 @@ describe("Template Inheritance Analyzer Tests", () => {
 
             const doc = parse(childContent);
 
-            const significant = children(doc).filter(
-                (n) => n.type !== "Text",
-            );
+            const significant = children(doc).filter((n) => n.type !== "Text");
             expect(significant.length).toBe(2);
-            expect(
-                significant.some((n) => n.type === "Stmt.Extends"),
-            ).toBe(true);
-            expect(
-                significant.some((n) => n.type === "Stmt.Block"),
-            ).toBe(true);
+            expect(significant.some((n) => n.type === "Stmt.Extends")).toBe(
+                true,
+            );
+            expect(significant.some((n) => n.type === "Stmt.Block")).toBe(true);
         });
 
         it("should parse template with block override", () => {
@@ -240,9 +236,7 @@ describe("Template Inheritance Analyzer Tests", () => {
             );
             expect(extendsStmt).toBeDefined();
 
-            const blocks = children(doc).filter(
-                (n) => n.type === "Stmt.Block",
-            );
+            const blocks = children(doc).filter((n) => n.type === "Stmt.Block");
             expect(blocks.length).toBeGreaterThanOrEqual(1);
         });
     });

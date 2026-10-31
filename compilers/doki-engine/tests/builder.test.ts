@@ -165,9 +165,13 @@ describe("Doki Language Configuration", () => {
 
     it("render(source, ctx, DOKI_LANGUAGE) uses {% %} without setLanguage", async () => {
         const { render } = await import("@doki-land/dejavu");
-        const out = render("Hi {% name %}!", { name: "Doki" }, {
-            delimiters: JSON.stringify(DOKI_LANGUAGE),
-        });
+        const out = render(
+            "Hi {% name %}!",
+            { name: "Doki" },
+            {
+                delimiters: JSON.stringify(DOKI_LANGUAGE),
+            },
+        );
         expect(out).toBe("Hi Doki!");
 
         // Default delimiters leave {% %} as literal text.

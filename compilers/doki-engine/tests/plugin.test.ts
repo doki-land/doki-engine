@@ -24,7 +24,9 @@ describe("PluginManager (retired)", () => {
     it("run() rejects with the retirement guidance", async () => {
         const hook: HookType = "beforeBuild";
         const ctx: HookContext = {};
-        await expect(new PluginManager().run(hook, ctx)).rejects.toThrow(RETIRED);
+        await expect(new PluginManager().run(hook, ctx)).rejects.toThrow(
+            RETIRED,
+        );
     });
 
     it("afterBuild() rejects with the retirement guidance", async () => {

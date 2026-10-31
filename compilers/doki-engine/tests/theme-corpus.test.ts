@@ -29,7 +29,10 @@ describe.skipIf(themeDirs.length === 0)(
                 const engine = new DokiEngine();
                 for (const f of readdirSync(dir)) {
                     if (!f.endsWith(".html")) continue;
-                    engine.registerTemplate(f, readFileSync(join(dir, f), "utf8"));
+                    engine.registerTemplate(
+                        f,
+                        readFileSync(join(dir, f), "utf8"),
+                    );
                 }
                 const ctx = {
                     site: {

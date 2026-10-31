@@ -46,8 +46,8 @@ export {
     type IrTemplateFacts,
     languageDelimiters,
     parseTemplate,
-    tryParseToIr,
     type TemplateLanguage,
+    tryParseToIr,
     walkIr,
 } from "./ir";
 export {

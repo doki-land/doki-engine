@@ -11,8 +11,8 @@
 import {
     extractTemplateFacts,
     type IrTemplateFacts,
-    tryParseToIr,
     type TemplateLanguage,
+    tryParseToIr,
 } from "./ir";
 
 export type BlockDef = {

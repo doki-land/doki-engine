@@ -8,10 +8,7 @@ function parseExpr(source: string) {
     }
     const interp = doc.body.children.find(
         (n) => n.type === "Interpolation",
-    ) as Extract<
-        (typeof doc.body.children)[number],
-        { type: "Interpolation" }
-    >;
+    ) as Extract<(typeof doc.body.children)[number], { type: "Interpolation" }>;
     return interp.expression;
 }
 
@@ -37,7 +34,9 @@ describe("Type Inference Tests", () => {
     // engine template IR has no array literal syntax
     describe("Array Literals (not in engine contract)", () => {
         it("should reject array literal", () => {
-            expect(() => parseTemplate("{% [1, 2, 3] %}", DOKI_LANGUAGE)).toThrow();
+            expect(() =>
+                parseTemplate("{% [1, 2, 3] %}", DOKI_LANGUAGE),
+            ).toThrow();
         });
 
         it("should reject empty array literal", () => {
@@ -135,9 +134,9 @@ describe("Type Inference Tests", () => {
         });
 
         it("should parse filter with arguments", () => {
-            expect(
-                parseExpr('{% name |> replace("a", "b") %}').type,
-            ).toBe("Expr.Pipe");
+            expect(parseExpr('{% name |> replace("a", "b") %}').type).toBe(
+                "Expr.Pipe",
+            );
         });
     });
 });

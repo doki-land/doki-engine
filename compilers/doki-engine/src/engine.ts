@@ -4,8 +4,8 @@
  * `dejavu.napi/0`). */
 
 import {
-    type RenderOptions,
     parse,
+    type RenderOptions,
     render,
     resolveTemplateRef,
 } from "@doki-land/dejavu";
@@ -63,11 +63,14 @@ function languageForPath(path: string): TemplateLanguage {
 export type TemplateRootName = "theme" | "project";
 
 /** path-v1 roots: higher priority resolves first, `theme:` is a scheme. */
-const ROOTS: Array<{ name: TemplateRootName; scheme?: string; priority: number }> =
-    [
-        { name: "theme", scheme: "theme", priority: 10 },
-        { name: "project", priority: 20 },
-    ];
+const ROOTS: Array<{
+    name: TemplateRootName;
+    scheme?: string;
+    priority: number;
+}> = [
+    { name: "theme", scheme: "theme", priority: 10 },
+    { name: "project", priority: 20 },
+];
 
 const EXTENSIONS = ["", ".html", ".doki", ".dj", ".dejavu"];
 
@@ -236,10 +239,7 @@ export class DokiEngine {
     }
 
     /** path-v1 解析：reference → canonical id（或 null）。 */
-    private resolve(
-        reference: string,
-        from?: CanonicalId,
-    ): CanonicalId | null {
+    private resolve(reference: string, from?: CanonicalId): CanonicalId | null {
         const result = resolveTemplateRef({
             reference,
             ...(from ? { from } : {}),
@@ -325,7 +325,10 @@ function collectStaticRefs(node: unknown, out: string[]): void {
         const target = (
             record.type === "Stmt.Include" ? record.path : record.parent
         ) as { type?: string; value?: unknown } | undefined;
-        if (target?.type === "Expr.Literal" && typeof target.value === "string") {
+        if (
+            target?.type === "Expr.Literal" &&
+            typeof target.value === "string"
+        ) {
             out.push(target.value);
         }
     }
