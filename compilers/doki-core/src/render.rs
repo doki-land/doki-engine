@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use crate::config::{ExtensionRef, ProjectConfig};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
-use crate::site::{PageType, SiteModel};
+use crate::site::{PageType, SiteModel, SitePage, TaxonomyView};
 
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
@@ -104,16 +104,15 @@ pub fn render_page(
     site: &SiteModel,
     include_drafts: bool,
 ) -> CoreResult<RenderedPage> {
-    let page =
-        site.page(&node.rel_path)
-            .ok_or_else(|| CoreError::build(format!("no site page for `{}`", node.rel_path)))?;
+    let page = site
+        .page(&node.rel_path)
+        .ok_or_else(|| CoreError::build(format!("no site page for `{}`", node.rel_path)))?;
     let content_html = markdown_to_html(&node.body, Some((site, node.rel_path.as_str())))?;
     let (layout_source, layout_id, layout_ext) = resolve_layout(
         project_root,
         config.theme.as_ref(),
         theme_root,
-        node.front_matter.layout.as_deref(),
-        page.page_type,
+        &content_layout_names(node.front_matter.layout.as_deref(), page.page_type),
     )?;
 
     let title = node
@@ -146,30 +145,8 @@ pub fn render_page(
         }
     }
 
-    let posts: Vec<Value> = site
-        .posts(include_drafts)
-        .into_iter()
-        .map(|post| {
-            json!({
-                "title": post.title,
-                "url": post.url,
-                "date": post.date,
-                "description": post.description,
-                "type": post.page_type,
-                "tags": post.tags,
-            })
-        })
-        .collect();
-
     let ctx = json!({
-        "site": {
-            "title": config.title,
-            "description": config.description,
-            "baseUrl": config.base_url,
-            "lang": config.lang,
-            "author": config.author,
-            "posts": posts,
-        },
+        "site": site_json(config, site, include_drafts),
         "page": page_fields,
         "title": title,
         "content": content_html,
@@ -184,6 +161,105 @@ pub fn render_page(
     })?;
 
     Ok(RenderedPage { html, layout_id })
+}
+
+/// Render one derived taxonomy page (`/tags/` index or `/tags/<slug>/`).
+///
+/// The layout chain is model-driven: `layouts/tags.<ext>` for the index and
+/// `layouts/tag.<ext>` for a single tag, each falling back to
+/// `layouts/page.<ext>` and then the builtin layout. The context exposes the
+/// same `site` object as content pages, a `page` with `type: "page"`, and the
+/// aggregate under `taxonomy` (index: `taxonomy.tags` rows; tag:
+/// `taxonomy.tag` / `display` / `url` / `posts` in `site.posts` order).
+pub fn render_taxonomy_page(
+    project_root: &Path,
+    config: &ProjectConfig,
+    theme_root: Option<&Path>,
+    page: &SitePage,
+    view: &TaxonomyView,
+    site: &SiteModel,
+    include_drafts: bool,
+) -> CoreResult<RenderedPage> {
+    let names: &[&str] = match view {
+        TaxonomyView::TagIndex(_) => &["tags", "page"],
+        TaxonomyView::Tag { .. } => &["tag", "page"],
+    };
+    let (layout_source, layout_id, layout_ext) =
+        resolve_layout(project_root, config.theme.as_ref(), theme_root, names)?;
+
+    let title = page.title.clone().unwrap_or_else(|| config.title.clone());
+    let taxonomy = match view {
+        TaxonomyView::TagIndex(entries) => json!({ "tags": entries }),
+        TaxonomyView::Tag {
+            slug,
+            display,
+            url,
+            posts,
+        } => json!({
+            "tag": slug,
+            "display": display,
+            "url": url,
+            "posts": posts
+                .iter()
+                .filter_map(|id| site.page(&id.0))
+                .map(post_entry)
+                .collect::<Vec<Value>>(),
+        }),
+    };
+    let page_json = json!({
+        "title": page.title,
+        "url": page.url,
+        "route": page.route,
+        "type": serde_json::to_value(page.page_type).expect("page type serializes"),
+        "permalink": page.url,
+        "lang": config.lang,
+    });
+
+    let ctx = json!({
+        "site": site_json(config, site, include_drafts),
+        "page": page_json,
+        "taxonomy": taxonomy,
+        "title": title,
+        "content": "",
+    });
+
+    let language = language_for_ext(layout_ext.as_deref());
+    let html = Dejavu::render_source_with(&layout_source, &ctx, &language).map_err(|e| {
+        CoreError::build(format!(
+            "doki render failed for `{}` (layout {layout_id}): {e}",
+            page.rel_path
+        ))
+    })?;
+
+    Ok(RenderedPage { html, layout_id })
+}
+
+/// One `site.posts` / `taxonomy.posts` entry as layouts consume it.
+fn post_entry(post: &SitePage) -> Value {
+    json!({
+        "title": post.title,
+        "url": post.url,
+        "date": post.date,
+        "description": post.description,
+        "type": post.page_type,
+        "tags": post.tags,
+    })
+}
+
+/// The `site` template object shared by content and taxonomy layouts.
+fn site_json(config: &ProjectConfig, site: &SiteModel, include_drafts: bool) -> Value {
+    json!({
+        "title": config.title,
+        "description": config.description,
+        "baseUrl": config.base_url,
+        "lang": config.lang,
+        "author": config.author,
+        "posts": site
+            .posts(include_drafts)
+            .into_iter()
+            .map(post_entry)
+            .collect::<Vec<Value>>(),
+    })
 }
 
 /// Convert Markdown source to HTML via Notedown import + export pipeline.
@@ -241,7 +317,9 @@ fn rewrite_document_links(graph: &mut DocumentGraph, model: &SiteModel, from_rel
 fn rewrite_inlines(inlines: &mut [Inline], model: &SiteModel, from_rel: &str) {
     for inline in inlines.iter_mut() {
         match inline {
-            Inline::Link { target, display, .. } => {
+            Inline::Link {
+                target, display, ..
+            } => {
                 if let RelationEndpoint::ExternalUri(uri) = target {
                     if let Some(rewritten) = model.resolve_link(uri, from_rel) {
                         *uri = rewritten;
@@ -272,24 +350,12 @@ fn layout_name_for_type(page_type: PageType) -> &'static str {
     }
 }
 
-/// Resolve a layout by the model-driven precedence: front matter `layout`,
-/// then `layouts/<page.type>.<ext>`, then `layouts/layout.<ext>`, then builtin.
-///
-/// Every name is probed with the same extension order (`.doki`, `.dejavu`,
-/// `.dj`, `.html`), so a type layout can ship in any supported profile.
-fn resolve_layout(
-    project_root: &Path,
-    theme: Option<&ExtensionRef>,
-    theme_root: Option<&Path>,
-    front_matter_layout: Option<&str>,
+/// Layout name chain for a content page: front matter `layout`, then
+/// `layouts/<page.type>`, then the generic `layouts/layout`.
+fn content_layout_names<'a>(
+    front_matter_layout: Option<&'a str>,
     page_type: PageType,
-) -> CoreResult<(String, String, Option<String>)> {
-    let resolved_root = theme_root.map(|p| p.to_path_buf()).or_else(|| {
-        theme
-            .and_then(|t| t.path.as_ref())
-            .map(|path| project_root.join(path))
-    });
-
+) -> Vec<&'a str> {
     let mut names: Vec<&str> = Vec::new();
     if let Some(name) = front_matter_layout
         .map(str::trim)
@@ -305,9 +371,27 @@ fn resolve_layout(
             names.push(name);
         }
     }
+    names
+}
+
+/// Resolve the first existing layout file for a name chain, then builtin.
+///
+/// Every name is probed with the same extension order (`.doki`, `.dejavu`,
+/// `.dj`, `.html`), so a type layout can ship in any supported profile.
+fn resolve_layout(
+    project_root: &Path,
+    theme: Option<&ExtensionRef>,
+    theme_root: Option<&Path>,
+    names: &[&str],
+) -> CoreResult<(String, String, Option<String>)> {
+    let resolved_root = theme_root.map(|p| p.to_path_buf()).or_else(|| {
+        theme
+            .and_then(|t| t.path.as_ref())
+            .map(|path| project_root.join(path))
+    });
 
     if let Some(theme_root) = resolved_root {
-        for name in names {
+        for &name in names {
             for candidate in layout_candidates(&theme_root, name) {
                 if candidate.is_file() {
                     let source = std::fs::read_to_string(&candidate)
@@ -362,7 +446,7 @@ mod tests {
         for node in nodes {
             graph.insert(node.clone());
         }
-        SiteModel::build(&graph).0
+        SiteModel::build(&graph, false).0
     }
 
     #[test]
@@ -372,10 +456,7 @@ mod tests {
             title: "Site".into(),
             ..ProjectConfig::default()
         };
-        let node = node_from_md(
-            "hello.md",
-            "---\ntitle: Hello\n---\n\n# Heading\n\npara\n",
-        );
+        let node = node_from_md("hello.md", "---\ntitle: Hello\n---\n\n# Heading\n\npara\n");
         let site = site_of(&[node.clone()]);
         let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
         assert!(page.html.contains("<title>Hello</title>"));
@@ -578,10 +659,7 @@ mod tests {
             }),
             ..ProjectConfig::default()
         };
-        let node = node_from_md(
-            "posts/2025-06-15-hello.md",
-            "---\ntitle: Hi\n---\n\nx\n",
-        );
+        let node = node_from_md("posts/2025-06-15-hello.md", "---\ntitle: Hi\n---\n\nx\n");
         let site = site_of(&[node.clone()]);
         let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
         assert!(
@@ -590,6 +668,135 @@ mod tests {
             ),
             "layout should read the site model page fields, got: {}",
             page.html
+        );
+    }
+
+    fn theme_cfg() -> ProjectConfig {
+        ProjectConfig {
+            title: "Site".into(),
+            theme: Some(crate::config::ExtensionRef {
+                path: Some("./themes/docs".into()),
+                package: None,
+            }),
+            ..ProjectConfig::default()
+        }
+    }
+
+    fn tagged_nodes() -> Vec<ContentNode> {
+        vec![
+            node_from_md(
+                "posts/2025-06-15-a.md",
+                "---\ntitle: A\ndate: 2025-06-15\ntags: [Meta]\n---\n\nx\n",
+            ),
+            node_from_md(
+                "posts/2025-10-20-b.md",
+                "---\ntitle: B\ndate: 2025-10-20\ntags: [Meta, 技术]\n---\n\nx\n",
+            ),
+        ]
+    }
+
+    #[test]
+    fn taxonomy_context_exposes_index_and_tag_views() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("tags.dejavu"),
+            "<idx>P<% page.type %>|<% page.route %>|<% page.url %>|<% page.permalink %>|<% page.lang %><% loop t in taxonomy.tags %>[<% t.tag %>|<% t.display %>|<% t.count %>|<% t.url %>]<% end loop %><% loop p in site.posts %>(<% p.title %>)<% end loop %></idx>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("tag.dejavu"),
+            "<tag>T<% taxonomy.tag %>|<% taxonomy.display %>|<% taxonomy.url %>|<% title %><% loop p in taxonomy.posts %>(<% p.title %>:<% p.url %>:<% p.type %>)<% end loop %></tag>\n",
+        )
+        .unwrap();
+        let cfg = theme_cfg();
+        let nodes = tagged_nodes();
+        let site = site_of(&nodes);
+
+        let index = site.route_target("/tags/").expect("index page");
+        let view = site.taxonomy(&index.id).expect("index view");
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        assert!(
+            page.html.contains(
+                "<idx>Ppage|/tags/|/pages/tags.html|/pages/tags.html|en[meta|Meta|2|/pages/tags/meta.html][技术|技术|1|/pages/tags/技术.html](B)(A)</idx>"
+            ),
+            "index context mismatch, got: {}",
+            page.html
+        );
+
+        let tag = site.route_target("/tags/meta/").expect("tag page");
+        let view = site.taxonomy(&tag.id).expect("tag view");
+        let page = render_taxonomy_page(dir.path(), &cfg, None, tag, view, &site, false).unwrap();
+        assert!(
+            page.html.contains(
+                "<tag>Tmeta|Meta|/pages/tags/meta.html|Meta(B:/pages/posts/2025-10-20-b.html:post)(A:/pages/posts/2025-06-15-a.html:post)</tag>"
+            ),
+            "tag members keep site.posts order, got: {}",
+            page.html
+        );
+    }
+
+    #[test]
+    fn taxonomy_layout_falls_back_to_page_then_builtin() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("page.dejavu"),
+            "<page-fallback><% title %></page-fallback>\n",
+        )
+        .unwrap();
+        std::fs::write(
+            layouts.join("layout.dejavu"),
+            "<generic><% title %></generic>\n",
+        )
+        .unwrap();
+        let cfg = theme_cfg();
+        let nodes = tagged_nodes();
+        let site = site_of(&nodes);
+        let index = site.route_target("/tags/").expect("index page");
+        let view = site.taxonomy(&index.id).expect("index view");
+
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        assert!(
+            page.html.contains("<page-fallback>Site</page-fallback>"),
+            "taxonomy pages fall back to `layouts/page.<ext>`, got: {}",
+            page.html
+        );
+        assert!(
+            page.layout_id.ends_with("page.dejavu"),
+            "the generic `layout` file must not win the taxonomy fallback, got: {}",
+            page.layout_id
+        );
+
+        std::fs::write(
+            layouts.join("tags.dejavu"),
+            "<tags-layout><% title %></tags-layout>\n",
+        )
+        .unwrap();
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        assert!(
+            page.html.contains("<tags-layout>"),
+            "`layouts/tags.<ext>` must win over `page`, got: {}",
+            page.html
+        );
+
+        let builtin = render_taxonomy_page(
+            dir.path(),
+            &cfg,
+            Some(std::path::Path::new(
+                dir.path().join("themes/none").as_path(),
+            )),
+            index,
+            view,
+            &site,
+            false,
+        )
+        .unwrap();
+        assert!(
+            builtin.layout_id.starts_with("builtin:"),
+            "a theme without layouts falls back to the builtin layout"
         );
     }
 }

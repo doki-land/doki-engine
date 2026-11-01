@@ -30,6 +30,12 @@ pub use protocol::{
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
-pub use render::{language_for_ext, markdown_to_html, render_page, RenderedPage, DEFAULT_LAYOUT};
+pub use render::{
+    language_for_ext, markdown_to_html, render_page, render_taxonomy_page, RenderedPage,
+    DEFAULT_LAYOUT,
+};
 pub use session::BuildSession;
-pub use site::{PageType, SiteModel, SitePage, INVALID_TYPE_CODE, ROUTE_CONFLICT_CODE};
+pub use site::{
+    PageType, SiteModel, SitePage, TagEntry, TaxonomyView, INVALID_TYPE_CODE, ROUTE_CONFLICT_CODE,
+    TAGS_INDEX_ID, TAXONOMY_CONFLICT_CODE,
+};

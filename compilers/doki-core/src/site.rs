@@ -22,6 +22,10 @@ use crate::graph::{ContentGraph, ContentId, ContentNode};
 pub const ROUTE_CONFLICT_CODE: &str = "doki.site.route-conflict";
 /// Stable diagnostic code for an unrecognized front matter `type`.
 pub const INVALID_TYPE_CODE: &str = "doki.site.invalid-type";
+/// Stable diagnostic code for a derived taxonomy route already owned by content.
+pub const TAXONOMY_CONFLICT_CODE: &str = "doki.site.taxonomy-conflict";
+/// Synthetic content id of the derived `/tags/` index page.
+pub const TAGS_INDEX_ID: &str = "taxonomy:tags";
 
 /// Page kind derived from front matter and content location.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -55,24 +59,60 @@ pub struct SitePage {
     pub tags: Vec<String>,
 }
 
+/// One tag row on the derived `/tags/` index page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagEntry {
+    /// Normalized slug.
+    pub tag: String,
+    /// Display name: first raw tag (content-id order) normalizing to `tag`.
+    pub display: String,
+    /// Public URL owning `/tags/<slug>/` (derived page, or content that won it).
+    pub url: String,
+    /// Publishable posts carrying this tag under the active draft mode.
+    pub count: usize,
+}
+
+/// Derived aggregate payload for a synthetic taxonomy page id.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TaxonomyView {
+    /// `/tags/` index listing every tag with its count.
+    TagIndex(Vec<TagEntry>),
+    /// `/tags/<slug>/` page listing member posts in `site.posts` order.
+    Tag {
+        slug: String,
+        display: String,
+        url: String,
+        posts: Vec<ContentId>,
+    },
+}
+
 /// Immutable site index built once per build from the full content graph.
 #[derive(Debug, Clone)]
 pub struct SiteModel {
-    /// Every page in content-id order.
+    /// Content pages in content-id order, then derived taxonomy pages.
     pages: Vec<SitePage>,
     /// Content rel path → index into `pages`.
     by_rel: BTreeMap<String, usize>,
     /// Authored route → index into `pages` (conflicted routes are absent).
     by_route: BTreeMap<String, usize>,
+    /// Synthetic taxonomy ids → aggregate payload.
+    taxonomies: BTreeMap<ContentId, TaxonomyView>,
+    /// Number of leading `pages` entries backed by content.
+    content_len: usize,
 }
 
 impl SiteModel {
-    /// Index every node of `graph` in content-id order.
+    /// Index every node of `graph` in content-id order, then derive the tag
+    /// taxonomy aggregate pages from the post collection.
     ///
     /// Invalid front matter `type` values and duplicate routes are reported as
     /// [`Diagnostic`]s; a conflicted route is left ambiguous instead of
-    /// silently picking the first node.
-    pub fn build(graph: &ContentGraph) -> (Self, Vec<Diagnostic>) {
+    /// silently picking the first node. A taxonomy route already owned by
+    /// content keeps the content page and reports a
+    /// [`TAXONOMY_CONFLICT_CODE`] Warning. Draft posts join the aggregates only
+    /// when `include_drafts` matches the build mode.
+    pub fn build(graph: &ContentGraph, include_drafts: bool) -> (Self, Vec<Diagnostic>) {
         let mut diagnostics = Vec::new();
         let mut pages: Vec<SitePage> = Vec::with_capacity(graph.len());
         let mut by_rel = BTreeMap::new();
@@ -130,19 +170,41 @@ impl SiteModel {
             });
         }
 
+        let mut taxonomies = BTreeMap::new();
+        let content_len = derive_tag_taxonomies(
+            &mut pages,
+            &mut by_route,
+            &mut taxonomies,
+            include_drafts,
+            &mut diagnostics,
+        );
+
         (
             Self {
                 pages,
                 by_rel,
                 by_route,
+                taxonomies,
+                content_len,
             },
             diagnostics,
         )
     }
 
-    /// Every page in content-id order.
+    /// Every page: content pages in content-id order, then derived taxonomy
+    /// pages (index first, then tag pages by slug).
     pub fn pages(&self) -> &[SitePage] {
         &self.pages
+    }
+
+    /// Content-backed pages only, in content-id order.
+    pub fn content_pages(&self) -> &[SitePage] {
+        &self.pages[..self.content_len]
+    }
+
+    /// Derived aggregate payload for a synthetic taxonomy page id.
+    pub fn taxonomy(&self, id: &ContentId) -> Option<&TaxonomyView> {
+        self.taxonomies.get(id)
     }
 
     /// Page of a content rel path.
@@ -185,6 +247,195 @@ impl SiteModel {
         let key = route_key_for(path, from_rel)?;
         let page = self.route_target(&key)?;
         Some(format!("{}{suffix}", page.url))
+    }
+}
+
+/// Synthetic taxonomy page id for one tag slug.
+pub(crate) fn tag_page_id(slug: &str) -> ContentId {
+    ContentId(format!("taxonomy:tag/{slug}"))
+}
+
+/// Trim, lowercase and collapse every whitespace run into a single `-`.
+pub(crate) fn normalize_tag_slug(raw: &str) -> String {
+    let mut out = String::new();
+    let mut pending_dash = false;
+    for ch in raw.trim().chars() {
+        if ch.is_whitespace() {
+            pending_dash = !out.is_empty();
+            continue;
+        }
+        if pending_dash {
+            out.push('-');
+            pending_dash = false;
+        }
+        out.extend(ch.to_lowercase());
+    }
+    out
+}
+
+/// Derive `/tags/` and `/tags/<slug>/` aggregate pages from the post
+/// collection and register them in the same route table. Returns the number of
+/// content pages that preceded the appended taxonomy pages.
+///
+/// Content wins every contested route: the aggregate is skipped and a
+/// [`TAXONOMY_CONFLICT_CODE`] Warning names the occupying content rel path.
+/// Index entries sort by count descending then slug ascending; member posts
+/// keep `site.posts` order (date descending then route ascending).
+fn derive_tag_taxonomies(
+    pages: &mut Vec<SitePage>,
+    by_route: &mut BTreeMap<String, usize>,
+    taxonomies: &mut BTreeMap<ContentId, TaxonomyView>,
+    include_drafts: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> usize {
+    let content_len = pages.len();
+    // Route owners are snapshotted before `pages` grows with taxonomy entries.
+    let owners: Vec<(String, String)> = pages
+        .iter()
+        .map(|page| (page.rel_path.clone(), page.url.clone()))
+        .collect();
+
+    // Group member posts per slug; display keeps the first raw tag in
+    // content-id order.
+    let mut display: BTreeMap<String, String> = BTreeMap::new();
+    let mut members: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    for (index, page) in pages.iter().enumerate() {
+        if page.page_type != PageType::Post || (page.draft && !include_drafts) {
+            continue;
+        }
+        let mut seen_in_post = BTreeSet::new();
+        for raw in &page.tags {
+            let slug = normalize_tag_slug(raw);
+            if slug.is_empty() || !seen_in_post.insert(slug.clone()) {
+                continue;
+            }
+            display.entry(slug.clone()).or_insert_with(|| raw.clone());
+            members.entry(slug).or_default().push(index);
+        }
+    }
+    if members.is_empty() {
+        return content_len;
+    }
+
+    // Member ordering mirrors `site.posts` (date desc, then route asc).
+    let mut ordered: Vec<usize> = members
+        .values()
+        .flat_map(|ids| ids.iter().copied())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    ordered.sort_by(|&a, &b| {
+        pages[b]
+            .date
+            .cmp(&pages[a].date)
+            .then_with(|| pages[a].route.cmp(&pages[b].route))
+    });
+    let ranks: BTreeMap<usize, usize> = ordered
+        .into_iter()
+        .enumerate()
+        .map(|(rank, index)| (index, rank))
+        .collect();
+    for ids in members.values_mut() {
+        ids.sort_by_key(|index| ranks[index]);
+    }
+
+    let index_route = "/tags/".to_string();
+    let index_output = "pages/tags.html".to_string();
+    let mut index_entries: Vec<TagEntry> = Vec::new();
+    let index_registered = match by_route.get(&index_route) {
+        Some(&occupied) => {
+            diagnostics.push(taxonomy_conflict_warning(&index_route, &owners[occupied].0));
+            false
+        }
+        None => {
+            by_route.insert(index_route.clone(), pages.len());
+            pages.push(SitePage {
+                id: ContentId(TAGS_INDEX_ID.into()),
+                rel_path: index_output.clone(),
+                page_type: PageType::Page,
+                route: index_route,
+                output: index_output.clone(),
+                url: format!("/{index_output}"),
+                title: None,
+                description: None,
+                date: None,
+                draft: false,
+                tags: Vec::new(),
+            });
+            true
+        }
+    };
+
+    for (slug, ids) in members {
+        let route = format!("/tags/{slug}/");
+        let output = format!("pages/tags/{slug}.html");
+        let (url, owner_is_content) = match by_route.get(&route) {
+            Some(&occupied) => {
+                diagnostics.push(taxonomy_conflict_warning(&route, &owners[occupied].0));
+                (owners[occupied].1.clone(), true)
+            }
+            None => {
+                let url = format!("/{output}");
+                by_route.insert(route.clone(), pages.len());
+                pages.push(SitePage {
+                    id: tag_page_id(&slug),
+                    rel_path: output.clone(),
+                    page_type: PageType::Page,
+                    route,
+                    output,
+                    url: url.clone(),
+                    title: Some(display[&slug].clone()),
+                    description: None,
+                    date: None,
+                    draft: false,
+                    tags: Vec::new(),
+                });
+                (url, false)
+            }
+        };
+        index_entries.push(TagEntry {
+            tag: slug.clone(),
+            display: display[&slug].clone(),
+            url: url.clone(),
+            count: ids.len(),
+        });
+        if !owner_is_content {
+            let view = TaxonomyView::Tag {
+                slug: slug.clone(),
+                display: display[&slug].clone(),
+                url,
+                posts: ids
+                    .into_iter()
+                    .map(|index| pages[index].id.clone())
+                    .collect(),
+            };
+            taxonomies.insert(tag_page_id(&slug), view);
+        }
+    }
+
+    if index_registered {
+        index_entries.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.tag.cmp(&b.tag)));
+        taxonomies.insert(
+            ContentId(TAGS_INDEX_ID.into()),
+            TaxonomyView::TagIndex(index_entries),
+        );
+    }
+    content_len
+}
+
+fn taxonomy_conflict_warning(route: &str, rel: &str) -> Diagnostic {
+    Diagnostic {
+        code: TAXONOMY_CONFLICT_CODE.into(),
+        severity: Severity::Warning,
+        message: format!(
+            "content `{rel}` already owns the taxonomy route `{route}`; the derived aggregate page is skipped"
+        ),
+        file: Some(rel.into()),
+        help: Some(
+            "rename or remove the content so the derived aggregate page can take the route".into(),
+        ),
+        plugin: None,
+        phase: None,
     }
 }
 
@@ -364,27 +615,42 @@ mod tests {
     }
 
     fn model(nodes: Vec<ContentNode>) -> SiteModel {
-        SiteModel::build(&graph(nodes)).0
+        SiteModel::build(&graph(nodes), false).0
+    }
+
+    fn tagged_post(rel: &str, date: &str, tags: &[&str], draft: bool) -> ContentNode {
+        node(
+            rel,
+            FrontMatter {
+                date: Some(date.into()),
+                draft,
+                tags: tags.iter().map(|tag| (*tag).to_string()).collect(),
+                ..FrontMatter::default()
+            },
+        )
     }
 
     #[test]
     fn type_derivation_follows_precedence() {
-        let (model, diagnostics) = SiteModel::build(&graph(vec![
-            plain("index.md"),
-            plain("about.md"),
-            plain("notes/deep.md"),
-            plain("posts/2025-06-15-welcome.md"),
-            plain("posts/index.md"),
-            node(
-                "guides/hello.md",
-                FrontMatter {
-                    layout: Some("post".into()),
-                    ..FrontMatter::default()
-                },
-            ),
-            typed("posts/override.md", "page"),
-            typed("about-home.md", "home"),
-        ]));
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("index.md"),
+                plain("about.md"),
+                plain("notes/deep.md"),
+                plain("posts/2025-06-15-welcome.md"),
+                plain("posts/index.md"),
+                node(
+                    "guides/hello.md",
+                    FrontMatter {
+                        layout: Some("post".into()),
+                        ..FrontMatter::default()
+                    },
+                ),
+                typed("posts/override.md", "page"),
+                typed("about-home.md", "home"),
+            ]),
+            false,
+        );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         assert_eq!(model.page("index.md").unwrap().page_type, PageType::Home);
         assert_eq!(model.page("about.md").unwrap().page_type, PageType::Page);
@@ -418,10 +684,13 @@ mod tests {
 
     #[test]
     fn unknown_type_reports_a_diagnostic_without_guessing() {
-        let (model, diagnostics) = SiteModel::build(&graph(vec![
-            typed("about.md", "article"),
-            typed("posts/a.md", "blog"),
-        ]));
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                typed("about.md", "article"),
+                typed("posts/a.md", "blog"),
+            ]),
+            false,
+        );
         assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
         assert!(diagnostics
             .iter()
@@ -462,10 +731,13 @@ mod tests {
 
     #[test]
     fn route_collisions_report_both_ids_and_leave_the_route_ambiguous() {
-        let (model, diagnostics) = SiteModel::build(&graph(vec![
-            plain("posts/hello.md"),
-            plain("posts/2025-06-15-hello.md"),
-        ]));
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("posts/hello.md"),
+                plain("posts/2025-06-15-hello.md"),
+            ]),
+            false,
+        );
         assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
         let conflict = &diagnostics[0];
         assert_eq!(conflict.code, ROUTE_CONFLICT_CODE);
@@ -640,5 +912,252 @@ mod tests {
             plain("posts/2025-06-15-hello.md"),
         ]);
         assert_eq!(model.resolve_link("posts/hello/", "index.md"), None);
+    }
+
+    #[test]
+    fn slug_normalization_trims_lowercases_and_collapses_whitespace() {
+        assert_eq!(normalize_tag_slug("  Hello   World  "), "hello-world");
+        assert_eq!(normalize_tag_slug("Meta"), "meta");
+        assert_eq!(normalize_tag_slug("技术"), "技术");
+        assert_eq!(normalize_tag_slug("A\tB\nC"), "a-b-c");
+        assert_eq!(normalize_tag_slug("   "), "");
+    }
+
+    #[test]
+    fn tag_aggregates_are_derived_and_registered_in_the_same_route_table() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                tagged_post(
+                    "posts/2025-06-15-a.md",
+                    "2025-06-15",
+                    &["技术", "Meta"],
+                    false,
+                ),
+                tagged_post("posts/2025-10-20-b.md", "2025-10-20", &["技术"], false),
+                node(
+                    "about.md",
+                    FrontMatter {
+                        tags: vec!["meta".into()],
+                        ..FrontMatter::default()
+                    },
+                ),
+            ]),
+            false,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+
+        let index = model
+            .route_target("/tags/")
+            .expect("index route registered");
+        assert_eq!(index.id.0, TAGS_INDEX_ID);
+        assert_eq!(index.output, "pages/tags.html");
+        assert_eq!(index.url, "/pages/tags.html");
+        assert_eq!(index.page_type, PageType::Page);
+        assert!(!index.draft);
+
+        let TaxonomyView::TagIndex(entries) = model.taxonomy(&index.id).unwrap() else {
+            panic!("index view must be a tag index")
+        };
+        assert_eq!(
+            entries
+                .iter()
+                .map(|e| (e.tag.as_str(), e.display.as_str(), e.count))
+                .collect::<Vec<_>>(),
+            [("技术", "技术", 2), ("meta", "Meta", 1)],
+            "count desc then slug asc, non-post tags never join"
+        );
+        assert_eq!(entries[0].url, "/pages/tags/技术.html");
+
+        let tag = model
+            .route_target("/tags/meta/")
+            .expect("tag route registered");
+        assert_eq!(tag.id.0, "taxonomy:tag/meta");
+        assert_eq!(tag.output, "pages/tags/meta.html");
+        assert_eq!(tag.url, "/pages/tags/meta.html");
+        assert_eq!(tag.title.as_deref(), Some("Meta"));
+
+        assert_eq!(
+            model.resolve_link("tags/", "about.md").as_deref(),
+            Some("/pages/tags.html")
+        );
+        assert_eq!(
+            model.resolve_link("tags/meta/", "about.md").as_deref(),
+            Some("/pages/tags/meta.html")
+        );
+
+        let view = model
+            .taxonomy(&ContentId("taxonomy:tag/技术".into()))
+            .unwrap();
+        let TaxonomyView::Tag { posts, .. } = view else {
+            panic!("tag view must carry members")
+        };
+        assert_eq!(
+            posts.iter().map(|id| id.0.as_str()).collect::<Vec<_>>(),
+            ["posts/2025-10-20-b.md", "posts/2025-06-15-a.md"],
+            "members keep site.posts order"
+        );
+
+        let ids: Vec<&str> = model.pages().iter().map(|p| p.id.0.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                "about.md",
+                "posts/2025-06-15-a.md",
+                "posts/2025-10-20-b.md",
+                TAGS_INDEX_ID,
+                "taxonomy:tag/meta",
+                "taxonomy:tag/技术",
+            ],
+            "content pages first, then the index and tag pages by slug"
+        );
+        assert_eq!(model.content_pages().len(), 3);
+    }
+
+    #[test]
+    fn slug_variants_merge_and_the_first_raw_tag_wins_display() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                tagged_post(
+                    "posts/2025-06-15-a.md",
+                    "2025-06-15",
+                    &["  Meta   Tag ", "meta tag"],
+                    false,
+                ),
+                tagged_post("posts/2025-10-20-b.md", "2025-10-20", &["META TAG"], false),
+            ]),
+            false,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert_eq!(
+            model.pages().len(),
+            4,
+            "two content pages plus one index and one merged tag page"
+        );
+        let TaxonomyView::TagIndex(entries) =
+            model.taxonomy(&ContentId(TAGS_INDEX_ID.into())).unwrap()
+        else {
+            panic!("index view")
+        };
+        assert_eq!(entries.len(), 1, "all variants normalize to one slug");
+        assert_eq!(entries[0].tag, "meta-tag");
+        assert_eq!(
+            entries[0].display, "  Meta   Tag ",
+            "display is the first raw tag in content-id order"
+        );
+        assert_eq!(entries[0].count, 2, "one post counts once per slug");
+    }
+
+    #[test]
+    fn content_wins_taxonomy_routes_and_skips_aggregates_with_warnings() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("tags.md"),
+                plain("tags/meta.md"),
+                tagged_post("posts/2025-06-15-a.md", "2025-06-15", &["Meta"], false),
+            ]),
+            false,
+        );
+        assert!(
+            model.pages().iter().all(|p| p.id.0 != TAGS_INDEX_ID),
+            "the index aggregate must be skipped"
+        );
+        assert!(
+            model.pages().iter().all(|p| p.id.0 != "taxonomy:tag/meta"),
+            "the tag aggregate must be skipped"
+        );
+        assert_eq!(model.route_target("/tags/").unwrap().id.0, "tags.md");
+        assert_eq!(
+            model.route_target("/tags/meta/").unwrap().id.0,
+            "tags/meta.md"
+        );
+
+        let conflicts: Vec<&Diagnostic> = diagnostics
+            .iter()
+            .filter(|d| d.code == TAXONOMY_CONFLICT_CODE)
+            .collect();
+        assert_eq!(conflicts.len(), 2, "{diagnostics:?}");
+        assert!(conflicts
+            .iter()
+            .all(|d| d.severity == Severity::Warning && d.file.is_some()));
+        assert!(conflicts
+            .iter()
+            .any(|d| { d.message.contains("tags.md") && d.message.contains("`/tags/`") }));
+        assert!(conflicts.iter().any(|d| {
+            d.message.contains("tags/meta.md") && d.message.contains("`/tags/meta/`")
+        }));
+    }
+
+    #[test]
+    fn drafts_join_aggregates_only_when_the_mode_includes_them() {
+        let nodes = vec![
+            tagged_post("posts/2025-06-15-a.md", "2025-06-15", &["meta"], false),
+            tagged_post(
+                "posts/2025-07-01-d.md",
+                "2025-07-01",
+                &["draft-only", "meta"],
+                true,
+            ),
+        ];
+
+        let (prod, diagnostics) = SiteModel::build(&graph(nodes.clone()), false);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let TaxonomyView::TagIndex(entries) =
+            prod.taxonomy(&ContentId(TAGS_INDEX_ID.into())).unwrap()
+        else {
+            panic!("index view")
+        };
+        assert_eq!(
+            entries
+                .iter()
+                .map(|e| (e.tag.as_str(), e.count))
+                .collect::<Vec<_>>(),
+            [("meta", 1)],
+            "production aggregates exclude drafts"
+        );
+        assert!(
+            prod.pages()
+                .iter()
+                .all(|p| p.id.0 != "taxonomy:tag/draft-only"),
+            "a draft-only tag has no production page"
+        );
+
+        let (dev, diagnostics) = SiteModel::build(&graph(nodes), true);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let TaxonomyView::TagIndex(entries) =
+            dev.taxonomy(&ContentId(TAGS_INDEX_ID.into())).unwrap()
+        else {
+            panic!("index view")
+        };
+        assert_eq!(
+            entries
+                .iter()
+                .map(|e| (e.tag.as_str(), e.count))
+                .collect::<Vec<_>>(),
+            [("meta", 2), ("draft-only", 1)],
+            "development aggregates include drafts"
+        );
+        let TaxonomyView::Tag { posts, .. } = dev
+            .taxonomy(&ContentId("taxonomy:tag/meta".into()))
+            .unwrap()
+        else {
+            panic!("tag view")
+        };
+        assert_eq!(posts.len(), 2);
+    }
+
+    #[test]
+    fn sites_without_tagged_posts_get_no_taxonomy_pages() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("index.md"),
+                plain("about.md"),
+                plain("posts/2025-06-15-untagged.md"),
+            ]),
+            false,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert_eq!(model.pages().len(), 3);
+        assert_eq!(model.content_pages().len(), 3);
+        assert!(model.route_target("/tags/").is_none());
     }
 }

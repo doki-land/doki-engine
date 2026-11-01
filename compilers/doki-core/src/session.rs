@@ -19,7 +19,7 @@ use crate::protocol::{
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
-use crate::render::render_page;
+use crate::render::{render_page, render_taxonomy_page};
 use crate::site::{output_rel, SiteModel, SitePage, ROUTE_CONFLICT_CODE};
 use crate::staging::StagingArea;
 
@@ -194,8 +194,7 @@ impl BuildSession {
         } else {
             if self.needs_full_rediscover || self.dirty.is_empty() || self.last_committed.is_empty()
             {
-                self.graph =
-                    discover_markdown_content(&self.paths.root, &self.config.content_dir)?;
+                self.graph = discover_markdown_content(&self.paths.root, &self.config.content_dir)?;
             }
             let previous = self.extensions.clone();
             self.extensions = resolve_declared_extensions(&self.config);
@@ -214,7 +213,7 @@ impl BuildSession {
         let output_root = self.paths.root.join(&self.config.output_dir);
         let staging = StagingArea::create(&output_root, &build_id)?;
 
-        let (site, site_diagnostics) = SiteModel::build(&self.graph);
+        let (site, site_diagnostics) = SiteModel::build(&self.graph, self.include_drafts(mode));
         let conflicts: Vec<Diagnostic> = site_diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.code == ROUTE_CONFLICT_CODE)
@@ -354,13 +353,21 @@ impl BuildSession {
         let output_dir = self.paths.root.join(&self.config.output_dir);
 
         let include_drafts = self.include_drafts(mode);
+        // The manifest `content` list stays content-backed; derived taxonomy
+        // pages appear only under `pages` / `files`.
+        let content_ids: Vec<ContentId> = active
+            .site
+            .content_pages()
+            .iter()
+            .filter(|page| include_drafts || !page.draft)
+            .map(|page| page.id.clone())
+            .collect();
         let pages: Vec<&SitePage> = active
             .site
             .pages()
             .iter()
             .filter(|page| include_drafts || !page.draft)
             .collect();
-        let content_ids: Vec<ContentId> = pages.iter().map(|page| page.id.clone()).collect();
         let page_files: Vec<String> = pages.iter().map(|page| page.output.clone()).collect();
         let manifest = json!({
             "buildId": build_id,
@@ -438,7 +445,10 @@ impl BuildSession {
     }
 
     /// Replace extension list with Node-resolved absolute paths (same ids).
-    pub fn set_resolved_extensions(&mut self, extensions: Vec<ResolvedExtension>) -> CoreResult<()> {
+    pub fn set_resolved_extensions(
+        &mut self,
+        extensions: Vec<ResolvedExtension>,
+    ) -> CoreResult<()> {
         self.ensure_alive()?;
         self.extensions = extensions;
         Ok(())
@@ -580,10 +590,7 @@ impl BuildSession {
         if let Some(resolved) = &theme.resolved_path {
             return Some(PathBuf::from(resolved));
         }
-        theme
-            .path
-            .as_ref()
-            .map(|p| self.paths.root.join(p))
+        theme.path.as_ref().map(|p| self.paths.root.join(p))
     }
 
     fn plan_for_current_phase(&self) -> BuildPlan {
@@ -605,9 +612,9 @@ impl BuildSession {
                         "pages": pages,
                     })
                 });
-                items.extend(self.hooks_for(HookKind::GenerateContent, |id| {
-                    json!({ "pluginId": id })
-                }));
+                items.extend(
+                    self.hooks_for(HookKind::GenerateContent, |id| json!({ "pluginId": id })),
+                );
                 items
             }
             BuildPhase::ContributeArtifacts => {
@@ -633,18 +640,7 @@ impl BuildSession {
             BuildPhase::Render | BuildPhase::ReadyToCommit | BuildPhase::Committed => Vec::new(),
         };
 
-        let content_count = match &active.render_ids {
-            Some(set) => set.len(),
-            None => {
-                let include_drafts = self.include_drafts(active.mode);
-                active
-                    .site
-                    .pages()
-                    .iter()
-                    .filter(|page| include_drafts || !page.draft)
-                    .count()
-            }
-        };
+        let content_count = self.render_queue().expect("active build").len();
 
         BuildPlan {
             build_id: active.build_id.clone(),
@@ -674,43 +670,48 @@ impl BuildSession {
             .collect()
     }
 
+    /// Page ids the render phase must produce: publishable pages inside the
+    /// active render set, plus every derived taxonomy aggregate (its members
+    /// can change whenever any post changes).
+    fn render_queue(&self) -> CoreResult<Vec<ContentId>> {
+        let active = self
+            .active
+            .as_ref()
+            .ok_or_else(|| CoreError::build("no active build"))?;
+        let include_drafts = self.include_drafts(active.mode);
+        Ok(active
+            .site
+            .pages()
+            .iter()
+            .filter(|page| include_drafts || !page.draft)
+            .filter(|page| match &active.render_ids {
+                None => true,
+                Some(set) => set.contains(&page.id) || active.site.taxonomy(&page.id).is_some(),
+            })
+            .map(|page| page.id.clone())
+            .collect())
+    }
+
     fn run_render(&mut self) -> CoreResult<()> {
-        let (mode, site_render_ids) = {
-            let active = self
-                .active
-                .as_ref()
-                .ok_or_else(|| CoreError::build("no active build"))?;
-            (active.mode, active.render_ids.clone())
-        };
+        let queue = self.render_queue()?;
+        let mode = self.active.as_ref().expect("active build").mode;
         let include_drafts = self.include_drafts(mode);
-        let render_ids: BTreeSet<ContentId> = match site_render_ids {
-            Some(ids) => ids,
-            None => self
-                .active
-                .as_ref()
-                .expect("active build")
-                .site
-                .pages()
-                .iter()
-                .filter(|page| include_drafts || !page.draft)
-                .map(|page| page.id.clone())
-                .collect(),
-        };
 
         let root = self.paths.root.clone();
         let theme_root = self.theme_fs_root();
         let site = &self.active.as_ref().expect("active build").site;
-        let jobs: Vec<(ContentId, String, String, String)> = render_ids
-            .iter()
-            .filter_map(|id| self.graph.nodes.get(id).map(|node| (id.clone(), node)))
-            .map(|(id, node)| {
-                let output = site
-                    .page(&node.rel_path)
-                    .map(|page| page.output.clone())
-                    .ok_or_else(|| {
-                        CoreError::build(format!("no site page for `{}`", node.rel_path))
-                    })?;
-                let page = render_page(
+        let mut jobs: Vec<(String, String)> = Vec::new();
+        let mut layout_deps: Vec<(ContentId, String)> = Vec::new();
+        for id in &queue {
+            let page = site
+                .pages()
+                .iter()
+                .find(|page| &page.id == id)
+                .ok_or_else(|| {
+                    CoreError::build(format!("render queue names unknown page `{}`", id.0))
+                })?;
+            let rendered = if let Some(node) = self.graph.nodes.get(id) {
+                let rendered = render_page(
                     &root,
                     &self.config,
                     theme_root.as_deref(),
@@ -718,17 +719,30 @@ impl BuildSession {
                     site,
                     include_drafts,
                 )?;
-                Ok((id, output, page.html, page.layout_id))
-            })
-            .collect::<CoreResult<Vec<_>>>()?;
+                layout_deps.push((id.clone(), rendered.layout_id.clone()));
+                rendered
+            } else if let Some(view) = site.taxonomy(id) {
+                render_taxonomy_page(
+                    &root,
+                    &self.config,
+                    theme_root.as_deref(),
+                    page,
+                    view,
+                    site,
+                    include_drafts,
+                )?
+            } else {
+                return Err(CoreError::build(format!(
+                    "page `{}` has neither a content node nor a taxonomy view",
+                    id.0
+                )));
+            };
+            jobs.push((page.output.clone(), rendered.html));
+        }
 
-        for (id, _rel, _html, layout_id) in &jobs {
+        for (id, layout_id) in &layout_deps {
             let dep = ContentId(format!("@layout/{layout_id}"));
-            self.graph
-                .edges
-                .entry(id.clone())
-                .or_default()
-                .insert(dep);
+            self.graph.edges.entry(id.clone()).or_default().insert(dep);
         }
 
         let public_dir = self.paths.root.join(&self.config.public_dir);
@@ -739,7 +753,7 @@ impl BuildSession {
             .as_mut()
             .ok_or_else(|| CoreError::build("no active build"))?
             .staging;
-        for (_id, rel, html, _layout) in jobs {
+        for (rel, html) in jobs {
             staging.write_file(&rel, html)?;
         }
 
@@ -760,11 +774,7 @@ fn copy_dir_into_staging(
     if !src.is_dir() {
         return Ok(());
     }
-    fn walk(
-        staging: &StagingArea,
-        dir: &std::path::Path,
-        prefix: &str,
-    ) -> CoreResult<()> {
+    fn walk(staging: &StagingArea, dir: &std::path::Path, prefix: &str) -> CoreResult<()> {
         for entry in fs::read_dir(dir).map_err(|source| CoreError::Io { source })? {
             let entry = entry.map_err(|source| CoreError::Io { source })?;
             let path = entry.path();
@@ -790,10 +800,7 @@ fn copy_dir_into_staging(
     walk(staging, src, dest_prefix)
 }
 
-fn apply_artifact_patch(
-    staging: &mut StagingArea,
-    patch: &serde_json::Value,
-) -> CoreResult<()> {
+fn apply_artifact_patch(staging: &mut StagingArea, patch: &serde_json::Value) -> CoreResult<()> {
     let Some(artifacts) = patch.get("artifacts").and_then(|v| v.as_array()) else {
         return Ok(());
     };
@@ -851,11 +858,7 @@ fn resolve_declared_extensions(config: &ProjectConfig) -> Vec<ResolvedExtension>
         let (source, path, package) = if theme.path.is_some() {
             (ExtensionSourceKind::LocalPath, theme.path.clone(), None)
         } else {
-            (
-                ExtensionSourceKind::Package,
-                None,
-                theme.package.clone(),
-            )
+            (ExtensionSourceKind::Package, None, theme.package.clone())
         };
         let id = path
             .clone()
@@ -875,11 +878,7 @@ fn resolve_declared_extensions(config: &ProjectConfig) -> Vec<ResolvedExtension>
         let (source, path, package) = if plugin.path.is_some() {
             (ExtensionSourceKind::LocalPath, plugin.path.clone(), None)
         } else {
-            (
-                ExtensionSourceKind::Package,
-                None,
-                plugin.package.clone(),
-            )
+            (ExtensionSourceKind::Package, None, plugin.package.clone())
         };
         let id = path
             .clone()
@@ -970,10 +969,7 @@ incremental = true
         assert_eq!(plan.content_count, 2);
         let result = session.commit_build().unwrap();
         assert_eq!(result.content_ids.len(), 2);
-        assert!(!dir
-            .path()
-            .join("dist/pages/secret.html")
-            .exists());
+        assert!(!dir.path().join("dist/pages/secret.html").exists());
         assert!(dir.path().join("dist/pages/hello.html").is_file());
         let manifest: serde_json::Value = serde_json::from_str(
             &fs::read_to_string(dir.path().join("dist/doki-manifest.json")).unwrap(),
@@ -1229,8 +1225,7 @@ enabled = true
         )
         .unwrap();
 
-        let mut session =
-            BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+        let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
         let plan = session.prepare_build(BuildMode::Development).unwrap();
         assert_eq!(plan.phase, BuildPhase::ValidateConfig);
 
@@ -1298,8 +1293,7 @@ enabled = true
         )
         .unwrap();
 
-        let mut session =
-            BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+        let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
         let err = session.prepare_build(BuildMode::Production).unwrap_err();
         let message = err.to_string();
         assert!(
@@ -1313,7 +1307,10 @@ enabled = true
             !dir.path().join("dist/pages/posts/hello.html").exists(),
             "a conflicted build must not render"
         );
-        assert!(!dir.path().join("dist/pages/posts/2025-06-15-hello.html").exists());
+        assert!(!dir
+            .path()
+            .join("dist/pages/posts/2025-06-15-hello.html")
+            .exists());
         assert!(session.active.is_none());
     }
 

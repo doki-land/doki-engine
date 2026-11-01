@@ -31,7 +31,7 @@ fn node_from_md(rel: &str, source: &str) -> ContentNode {
 fn site_model(node: &ContentNode) -> (SiteModel, Vec<doki_core::Diagnostic>) {
     let mut graph = doki_core::ContentGraph::default();
     graph.insert(node.clone());
-    SiteModel::build(&graph)
+    SiteModel::build(&graph, false)
 }
 
 fn theme_cfg() -> ProjectConfig {
@@ -241,7 +241,7 @@ fn markdown_links_rewrite_to_built_permalinks() {
     .unwrap();
 
     let graph = discover_markdown_content(dir.path(), "content").unwrap();
-    let (site, diagnostics) = SiteModel::build(&graph);
+    let (site, diagnostics) = SiteModel::build(&graph, false);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let cfg = ProjectConfig {
         title: "Site".into(),
@@ -258,7 +258,10 @@ fn markdown_links_rewrite_to_built_permalinks() {
     );
     assert!(page.html.contains(r#"<a href="/pages/about.html">"#));
     assert!(page.html.contains(r#"<a href="https://example.com/">"#));
-    assert!(page.html.contains(r#"<a href="nope/">"#), "unknown route stays verbatim");
+    assert!(
+        page.html.contains(r#"<a href="nope/">"#),
+        "unknown route stays verbatim"
+    );
     assert!(
         !page.html.contains("posts/welcome-to-fate/"),
         "authored route must not survive the rewrite, got: {}",
@@ -282,7 +285,7 @@ fn fate_home_and_archive_list_site_model_posts_without_markdown_lists() {
     let examples = fate_examples_root();
     let graph = discover_markdown_content(&examples.join("_shared-corpus"), "content")
         .expect("shared corpus loads");
-    let (site, diagnostics) = SiteModel::build(&graph);
+    let (site, diagnostics) = SiteModel::build(&graph, false);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let posts = site.posts(false);
     assert_eq!(
@@ -357,7 +360,7 @@ fn site_model_exposes_page_permalink_to_layout() {
     );
 
     let graph = discover_markdown_content(dir.path(), "content").unwrap();
-    let (site, diagnostics) = SiteModel::build(&graph);
+    let (site, diagnostics) = SiteModel::build(&graph, false);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let node = graph.nodes.get(&ContentId("p.md".into())).unwrap();
     let page = render_page(dir.path(), &theme_cfg(), None, node, &site, false).unwrap();
