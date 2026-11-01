@@ -47,6 +47,8 @@ pub struct FrontMatterDto {
     pub weight: Option<i64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lang: Option<String>,
     #[serde(default, skip_serializing_if = "serde_json::Map::is_empty")]
     pub fields: serde_json::Map<String, serde_json::Value>,
 }
@@ -62,6 +64,7 @@ impl From<FrontMatter> for FrontMatterDto {
             draft: fm.draft,
             weight: fm.weight,
             tags: fm.tags,
+            lang: fm.lang,
             fields: fm.fields,
         }
     }

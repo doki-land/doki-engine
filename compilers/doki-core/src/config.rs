@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use figment::{
@@ -8,6 +8,7 @@ use figment::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ConfigError, ConfigResult};
+use crate::i18n::is_valid_locale_id;
 
 /// Absolute project root that contains `doki.toml`.
 #[derive(Debug, Clone)]
@@ -78,6 +79,18 @@ pub struct OverrideTarget {
     pub path: String,
 }
 
+/// `[i18n]` block: enabled locales plus the explicit fallback chain.
+///
+/// `locales` must contain the site `lang` (the chain tail). `fallback` maps a
+/// locale to its explicit parent; every chain still ends at `lang`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct I18nConfig {
+    pub locales: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub fallback: BTreeMap<String, String>,
+}
+
 /// Logical `doki.toml` model after Figment merge (this type + `validate()` are authoritative).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -89,6 +102,8 @@ pub struct ProjectConfig {
     pub base_url: Option<String>,
     #[serde(default = "default_lang")]
     pub lang: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub i18n: Option<I18nConfig>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(default = "default_content_dir")]
@@ -132,6 +147,7 @@ impl Default for ProjectConfig {
             description: None,
             base_url: None,
             lang: default_lang(),
+            i18n: None,
             author: None,
             content_dir: default_content_dir(),
             output_dir: default_output_dir(),
@@ -150,6 +166,12 @@ impl ProjectConfig {
         if self.title.trim().is_empty() {
             return Err(ConfigError::invalid("`title` must not be empty"));
         }
+        if !is_valid_locale_id(&self.lang) {
+            return Err(ConfigError::invalid(format!(
+                "`lang` must be a locale id like `en` or `zh-CN`, got `{}`",
+                self.lang
+            )));
+        }
         if let Some(theme) = &self.theme {
             theme.validate("theme")?;
         }
@@ -161,6 +183,54 @@ impl ProjectConfig {
                 return Err(ConfigError::invalid(
                     "overrides entries require non-empty package name and path",
                 ));
+            }
+        }
+        if let Some(i18n) = &self.i18n {
+            self.validate_i18n(i18n)?;
+        }
+        Ok(())
+    }
+
+    fn validate_i18n(&self, i18n: &I18nConfig) -> ConfigResult<()> {
+        if i18n.locales.is_empty() {
+            return Err(ConfigError::invalid(
+                "`i18n.locales` must list at least one locale",
+            ));
+        }
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        for locale in &i18n.locales {
+            if !is_valid_locale_id(locale) {
+                return Err(ConfigError::invalid(format!(
+                    "`i18n.locales` entry `{locale}` is not a valid locale id"
+                )));
+            }
+            if !seen.insert(locale.as_str()) {
+                return Err(ConfigError::invalid(format!(
+                    "`i18n.locales` lists `{locale}` more than once"
+                )));
+            }
+        }
+        if !seen.contains(self.lang.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "`i18n.locales` must include the site `lang` `{}`",
+                self.lang
+            )));
+        }
+        for (child, parent) in &i18n.fallback {
+            if !seen.contains(child.as_str()) {
+                return Err(ConfigError::invalid(format!(
+                    "`i18n.fallback` key `{child}` is not listed in `i18n.locales`"
+                )));
+            }
+            if !seen.contains(parent.as_str()) {
+                return Err(ConfigError::invalid(format!(
+                    "`i18n.fallback` parent `{parent}` of `{child}` is not listed in `i18n.locales`"
+                )));
+            }
+            if child == &self.lang {
+                return Err(ConfigError::invalid(format!(
+                    "`i18n.fallback` must not give the site `lang` `{child}` a parent, every chain ends at `lang`"
+                )));
             }
         }
         Ok(())
@@ -457,5 +527,80 @@ package = "@acme/theme"
         )
         .unwrap();
         assert_eq!(cfg.lang, "ja");
+    }
+
+    #[test]
+    fn i18n_block_loads_and_chains_are_validated() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join("doki.toml"),
+            r#"
+title = "Multi"
+lang = "en"
+
+[i18n]
+locales = ["en", "zh", "zh-TW"]
+
+[i18n.fallback]
+"zh-TW" = "zh"
+"#,
+        )
+        .unwrap();
+
+        let (_, cfg) = load_project_config(dir.path(), LoadOptions::default()).unwrap();
+        let i18n = cfg.i18n.expect("[i18n] parses");
+        assert_eq!(i18n.locales, ["en", "zh", "zh-TW"]);
+        assert_eq!(i18n.fallback.get("zh-TW").map(String::as_str), Some("zh"));
+
+        // locales must contain the site lang
+        let bad = ProjectConfig {
+            lang: "en".into(),
+            i18n: Some(I18nConfig {
+                locales: vec!["zh".into()],
+                fallback: BTreeMap::new(),
+            }),
+            ..ProjectConfig::default()
+        };
+        assert!(bad.validate().unwrap_err().to_string().contains("lang"));
+
+        // fallback endpoints must be listed locales
+        let bad_parent = ProjectConfig {
+            lang: "en".into(),
+            i18n: Some(I18nConfig {
+                locales: vec!["en".into(), "zh".into()],
+                fallback: BTreeMap::from([("zh".to_string(), "de".to_string())]),
+            }),
+            ..ProjectConfig::default()
+        };
+        assert!(
+            bad_parent
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("i18n.locales")
+        );
+
+        // the site lang never gets a fallback parent
+        let bad_lang_parent = ProjectConfig {
+            i18n: Some(I18nConfig {
+                locales: vec!["en".into(), "zh".into()],
+                fallback: BTreeMap::from([("en".to_string(), "zh".to_string())]),
+            }),
+            ..ProjectConfig::default()
+        };
+        assert!(
+            bad_lang_parent
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("chain ends at `lang`")
+        );
+
+        // locale ids reject traversal and separators
+        let bad_id = ProjectConfig {
+            lang: "../evil".into(),
+            ..ProjectConfig::default()
+        };
+        assert!(bad_id.validate().unwrap_err().to_string().contains("lang"));
     }
 }

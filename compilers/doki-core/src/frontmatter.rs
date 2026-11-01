@@ -23,6 +23,8 @@ pub struct FrontMatter {
     pub weight: Option<i64>,
     /// Front matter `tags` sequence — the only input for tag taxonomy aggregation.
     pub tags: Vec<String>,
+    /// Front matter `lang` overrides the site `lang` for this page's locale.
+    pub lang: Option<String>,
     /// Full table as JSON for plugin / template context later.
     pub fields: Map<String, Value>,
 }
@@ -37,6 +39,7 @@ impl FrontMatter {
         let draft = bool_field(&fields, "draft").unwrap_or(false);
         let weight = i64_field(&fields, "weight");
         let tags = tags_field(&fields);
+        let lang = string_field(&fields, "lang");
         Self {
             title,
             description,
@@ -46,6 +49,7 @@ impl FrontMatter {
             draft,
             weight,
             tags,
+            lang,
             fields,
         }
     }
@@ -208,6 +212,14 @@ mod tests {
         let doc = parse_document("# Just md\n").unwrap();
         assert!(doc.front_matter.title.is_none());
         assert_eq!(doc.body, "# Just md\n");
+    }
+
+    #[test]
+    fn lang_override_is_extracted() {
+        let doc = parse_document("---\ntitle: T\nlang: zh-TW\n---\n\nx\n").unwrap();
+        assert_eq!(doc.front_matter.lang.as_deref(), Some("zh-TW"));
+        let missing = parse_document("---\ntitle: T\n---\n\nx\n").unwrap();
+        assert!(missing.front_matter.lang.is_none());
     }
 
     #[test]

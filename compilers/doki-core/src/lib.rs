@@ -8,6 +8,7 @@ mod diagnostic;
 mod error;
 mod frontmatter;
 mod graph;
+mod i18n;
 mod protocol;
 mod render;
 mod session;
@@ -15,12 +16,16 @@ mod site;
 mod staging;
 
 pub use config::{
-    load_project_config, peek_theme_ref, theme_defaults_file, ExtensionRef, LoadOptions,
-    OverrideTarget, PluginEntry, ProjectConfig, ProjectPaths,
+    load_project_config, peek_theme_ref, theme_defaults_file, ExtensionRef, I18nConfig,
+    LoadOptions, OverrideTarget, PluginEntry, ProjectConfig, ProjectPaths,
 };
 pub use diagnostic::{Diagnostic, Severity};
 pub use error::{ConfigError, ConfigResult, CoreError, CoreResult};
 pub use frontmatter::{parse_document, FrontMatter, ParsedDocument};
+pub use i18n::{
+    I18n, CATALOG_IO_CODE, CATALOG_SYNTAX_CODE, DUPLICATE_KEY_CODE, FALLBACK_CYCLE_CODE,
+    MISSING_CATALOG_CODE, MISSING_KEY_CODE,
+};
 pub use graph::{
     discover_markdown_content, load_markdown_node, ContentGraph, ContentId, ContentKind,
     ContentNode, FrontMatterDto,
