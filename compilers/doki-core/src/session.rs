@@ -213,7 +213,8 @@ impl BuildSession {
         let output_root = self.paths.root.join(&self.config.output_dir);
         let staging = StagingArea::create(&output_root, &build_id)?;
 
-        let (site, site_diagnostics) = SiteModel::build(&self.graph, self.include_drafts(mode));
+        let (site, site_diagnostics) =
+            SiteModel::build(&self.graph, self.include_drafts(mode), &self.config.lang);
         let conflicts: Vec<Diagnostic> = site_diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.code == ROUTE_CONFLICT_CODE)

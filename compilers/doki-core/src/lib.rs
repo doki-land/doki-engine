@@ -41,6 +41,6 @@ pub use render::{
 };
 pub use session::BuildSession;
 pub use site::{
-    PageType, SiteModel, SitePage, TagEntry, TaxonomyView, INVALID_TYPE_CODE, ROUTE_CONFLICT_CODE,
-    TAGS_INDEX_ID, TAXONOMY_CONFLICT_CODE,
+    PageType, SiteModel, SitePage, TagEntry, TaxonomyView, INVALID_LOCALE_CODE, INVALID_TYPE_CODE,
+    ROUTE_CONFLICT_CODE, TAGS_INDEX_ID, TAXONOMY_CONFLICT_CODE,
 };

@@ -17,11 +17,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::graph::{ContentGraph, ContentId, ContentNode};
+use crate::i18n::is_valid_locale_id;
 
 /// Stable diagnostic code for two contents mapping to one route.
 pub const ROUTE_CONFLICT_CODE: &str = "doki.site.route-conflict";
 /// Stable diagnostic code for an unrecognized front matter `type`.
 pub const INVALID_TYPE_CODE: &str = "doki.site.invalid-type";
+/// Stable diagnostic code for a front matter `lang` that is not a locale id.
+pub const INVALID_LOCALE_CODE: &str = "doki.site.invalid-locale";
 /// Stable diagnostic code for a derived taxonomy route already owned by content.
 pub const TAXONOMY_CONFLICT_CODE: &str = "doki.site.taxonomy-conflict";
 /// Synthetic content id of the derived `/tags/` index page.
@@ -57,6 +60,9 @@ pub struct SitePage {
     pub draft: bool,
     /// Raw front matter `tags` sequence (empty when the content declares none).
     pub tags: Vec<String>,
+    /// Resolved page locale: front matter `lang` when it is a valid locale id,
+    /// otherwise the site default locale.
+    pub locale: String,
 }
 
 /// One tag row on the derived `/tags/` index page.
@@ -112,7 +118,18 @@ impl SiteModel {
     /// content keeps the content page and reports a
     /// [`TAXONOMY_CONFLICT_CODE`] Warning. Draft posts join the aggregates only
     /// when `include_drafts` matches the build mode.
-    pub fn build(graph: &ContentGraph, include_drafts: bool) -> (Self, Vec<Diagnostic>) {
+    ///
+    /// Every page resolves its locale from front matter `lang` (falling back to
+    /// `default_locale` when absent or invalid, with an
+    /// [`INVALID_LOCALE_CODE`] Warning). Non-default locales prefix the route
+    /// with `/{locale}/`; the default locale keeps the authored route
+    /// unprefixed. All locales share one route table, so a prefixed route
+    /// colliding with any other page follows the same conflict rule.
+    pub fn build(
+        graph: &ContentGraph,
+        include_drafts: bool,
+        default_locale: &str,
+    ) -> (Self, Vec<Diagnostic>) {
         let mut diagnostics = Vec::new();
         let mut pages: Vec<SitePage> = Vec::with_capacity(graph.len());
         let mut by_rel = BTreeMap::new();
@@ -121,7 +138,13 @@ impl SiteModel {
 
         for node in graph.nodes.values() {
             let page_type = derive_page_type(node, &mut diagnostics);
-            let route = route_of(&node.rel_path);
+            let locale = resolve_locale(node, default_locale, &mut diagnostics);
+            let base_route = route_of(&node.rel_path);
+            let route = if locale == default_locale {
+                base_route
+            } else {
+                format!("/{locale}{base_route}")
+            };
             let output = output_rel(&node.rel_path);
             let url = format!("/{output}");
             let index = pages.len();
@@ -167,6 +190,7 @@ impl SiteModel {
                 date: node.front_matter.date.clone(),
                 draft: node.front_matter.draft,
                 tags: node.front_matter.tags.clone(),
+                locale,
             });
         }
 
@@ -176,6 +200,7 @@ impl SiteModel {
             &mut by_route,
             &mut taxonomies,
             include_drafts,
+            default_locale,
             &mut diagnostics,
         );
 
@@ -286,6 +311,7 @@ fn derive_tag_taxonomies(
     by_route: &mut BTreeMap<String, usize>,
     taxonomies: &mut BTreeMap<ContentId, TaxonomyView>,
     include_drafts: bool,
+    default_locale: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> usize {
     let content_len = pages.len();
@@ -361,6 +387,7 @@ fn derive_tag_taxonomies(
                 date: None,
                 draft: false,
                 tags: Vec::new(),
+                locale: default_locale.to_string(),
             });
             true
         }
@@ -389,6 +416,7 @@ fn derive_tag_taxonomies(
                     date: None,
                     draft: false,
                     tags: Vec::new(),
+                    locale: default_locale.to_string(),
                 });
                 (url, false)
             }
@@ -485,6 +513,38 @@ fn derive_page_type(node: &ContentNode, diagnostics: &mut Vec<Diagnostic>) -> Pa
         return PageType::Post;
     }
     PageType::Page
+}
+
+/// Page locale: trimmed front matter `lang` when it is a valid locale id,
+/// otherwise `default_locale`. A non-empty but invalid value reports an
+/// [`INVALID_LOCALE_CODE`] Warning naming the offending declaration.
+fn resolve_locale(node: &ContentNode, default_locale: &str, diagnostics: &mut Vec<Diagnostic>) -> String {
+    let Some(raw) = node.front_matter.lang.as_deref() else {
+        return default_locale.to_string();
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return default_locale.to_string();
+    }
+    if is_valid_locale_id(trimmed) {
+        return trimmed.to_string();
+    }
+    diagnostics.push(Diagnostic {
+        code: INVALID_LOCALE_CODE.into(),
+        severity: Severity::Warning,
+        message: format!(
+            "content `{}` declares invalid front matter `lang` `{raw}`",
+            node.rel_path
+        ),
+        file: Some(node.rel_path.clone()),
+        help: Some(
+            "use a BCP-47 style locale id such as `en`, `zh` or `zh-CN`; the page falls back to the site default locale"
+                .into(),
+        ),
+        plugin: None,
+        phase: None,
+    });
+    default_locale.to_string()
 }
 
 /// Route key of a content rel path: `/[<dir>/]<slug>/` with the date prefix
@@ -615,7 +675,7 @@ mod tests {
     }
 
     fn model(nodes: Vec<ContentNode>) -> SiteModel {
-        SiteModel::build(&graph(nodes), false).0
+        SiteModel::build(&graph(nodes), false, "en").0
     }
 
     fn tagged_post(rel: &str, date: &str, tags: &[&str], draft: bool) -> ContentNode {
@@ -650,6 +710,7 @@ mod tests {
                 typed("about-home.md", "home"),
             ]),
             false,
+            "en",
         );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         assert_eq!(model.page("index.md").unwrap().page_type, PageType::Home);
@@ -690,6 +751,7 @@ mod tests {
                 typed("posts/a.md", "blog"),
             ]),
             false,
+            "en",
         );
         assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
         assert!(diagnostics
@@ -737,6 +799,7 @@ mod tests {
                 plain("posts/2025-06-15-hello.md"),
             ]),
             false,
+            "en",
         );
         assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
         let conflict = &diagnostics[0];
@@ -943,6 +1006,7 @@ mod tests {
                 ),
             ]),
             false,
+            "en",
         );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
 
@@ -1026,6 +1090,7 @@ mod tests {
                 tagged_post("posts/2025-10-20-b.md", "2025-10-20", &["META TAG"], false),
             ]),
             false,
+            "en",
         );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         assert_eq!(
@@ -1056,6 +1121,7 @@ mod tests {
                 tagged_post("posts/2025-06-15-a.md", "2025-06-15", &["Meta"], false),
             ]),
             false,
+            "en",
         );
         assert!(
             model.pages().iter().all(|p| p.id.0 != TAGS_INDEX_ID),
@@ -1099,7 +1165,7 @@ mod tests {
             ),
         ];
 
-        let (prod, diagnostics) = SiteModel::build(&graph(nodes.clone()), false);
+        let (prod, diagnostics) = SiteModel::build(&graph(nodes.clone()), false, "en");
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         let TaxonomyView::TagIndex(entries) =
             prod.taxonomy(&ContentId(TAGS_INDEX_ID.into())).unwrap()
@@ -1121,7 +1187,7 @@ mod tests {
             "a draft-only tag has no production page"
         );
 
-        let (dev, diagnostics) = SiteModel::build(&graph(nodes), true);
+        let (dev, diagnostics) = SiteModel::build(&graph(nodes), true, "en");
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         let TaxonomyView::TagIndex(entries) =
             dev.taxonomy(&ContentId(TAGS_INDEX_ID.into())).unwrap()
@@ -1145,6 +1211,129 @@ mod tests {
         assert_eq!(posts.len(), 2);
     }
 
+    fn localized(rel: &str, lang: &str) -> ContentNode {
+        node(
+            rel,
+            FrontMatter {
+                lang: Some(lang.into()),
+                ..FrontMatter::default()
+            },
+        )
+    }
+
+    #[test]
+    fn non_default_locales_prefix_the_route_and_default_stays_unprefixed() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("index.md"),
+                localized("blog/index.md", "zh-CN"),
+                localized("about.md", "zh-CN"),
+                plain("about.en.md"),
+            ]),
+            false,
+            "en",
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert_eq!(model.page("index.md").unwrap().route, "/");
+        assert_eq!(model.page("index.md").unwrap().locale, "en");
+        assert_eq!(model.page("blog/index.md").unwrap().route, "/zh-CN/blog/");
+        assert_eq!(model.page("blog/index.md").unwrap().locale, "zh-CN");
+        assert_eq!(model.page("about.md").unwrap().route, "/zh-CN/about/");
+        assert_eq!(model.page("about.en.md").unwrap().route, "/about.en/");
+        assert_eq!(model.page("about.en.md").unwrap().locale, "en");
+
+        let zh_blog = model.route_target("/zh-CN/blog/").expect("prefixed index route");
+        assert_eq!(zh_blog.id.0, "blog/index.md");
+        let zh_about = model.route_target("/zh-CN/about/").expect("prefixed about route");
+        assert_eq!(zh_about.id.0, "about.md");
+        assert!(model.route_target("/about/").is_none());
+
+        assert_eq!(
+            model.resolve_link("zh-CN/about/", "index.md").as_deref(),
+            Some("/pages/about.html"),
+            "locale-prefixed routes resolve like any authored route"
+        );
+        assert_eq!(
+            model.page("blog/index.md").unwrap().output, "pages/blog/index.html",
+            "output and url keep following the content path"
+        );
+    }
+
+    #[test]
+    fn prefixed_locale_routes_conflict_like_any_other_routes() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                plain("zh-CN/about.md"),
+                localized("about.md", "zh-CN"),
+            ]),
+            false,
+            "en",
+        );
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        let conflict = &diagnostics[0];
+        assert_eq!(conflict.code, ROUTE_CONFLICT_CODE);
+        assert_eq!(conflict.severity, Severity::Error);
+        assert!(conflict.message.contains("/zh-CN/about/"));
+        assert!(model.route_target("/zh-CN/about/").is_none());
+        assert!(model.page("about.md").is_some());
+        assert!(model.page("zh-CN/about.md").is_some());
+    }
+
+    #[test]
+    fn invalid_front_matter_lang_falls_back_to_the_default_locale() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                localized("bad.md", "a/b"),
+                localized("empty.md", "   "),
+                localized("good.md", " zh-CN "),
+            ]),
+            false,
+            "en",
+        );
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert_eq!(diagnostics[0].code, INVALID_LOCALE_CODE);
+        assert_eq!(diagnostics[0].severity, Severity::Warning);
+        assert!(diagnostics[0].message.contains("a/b"));
+        assert_eq!(diagnostics[0].file.as_deref(), Some("bad.md"));
+        assert_eq!(model.page("bad.md").unwrap().locale, "en");
+        assert_eq!(model.page("bad.md").unwrap().route, "/bad/");
+        assert_eq!(model.page("empty.md").unwrap().locale, "en");
+        assert_eq!(model.page("good.md").unwrap().locale, "zh-CN");
+        assert_eq!(model.page("good.md").unwrap().route, "/zh-CN/good/");
+    }
+
+    #[test]
+    fn taxonomy_pages_carry_the_default_locale_and_stay_unprefixed() {
+        let (model, diagnostics) = SiteModel::build(
+            &graph(vec![
+                localized("posts/2025-06-15-a.md", "zh-CN"),
+                node(
+                    "posts/2025-10-20-b.md",
+                    FrontMatter {
+                        date: Some("2025-10-20".into()),
+                        tags: vec!["Meta".into()],
+                        ..FrontMatter::default()
+                    },
+                ),
+            ]),
+            false,
+            "en",
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let index = model.route_target("/tags/").expect("index route stays unprefixed");
+        assert_eq!(index.locale, "en");
+        let tag = model.route_target("/tags/meta/").expect("tag route stays unprefixed");
+        assert_eq!(tag.locale, "en");
+        assert_eq!(model.page("posts/2025-06-15-a.md").unwrap().route, "/zh-CN/posts/a/");
+    }
+
+    #[test]
+    fn site_page_wire_serializes_the_locale_field() {
+        let model = model(vec![localized("about.md", "zh-CN")]);
+        let wire = serde_json::to_value(model.page("about.md").unwrap()).unwrap();
+        assert_eq!(wire["locale"], serde_json::json!("zh-CN"));
+    }
+
     #[test]
     fn sites_without_tagged_posts_get_no_taxonomy_pages() {
         let (model, diagnostics) = SiteModel::build(
@@ -1154,6 +1343,7 @@ mod tests {
                 plain("posts/2025-06-15-untagged.md"),
             ]),
             false,
+            "en",
         );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         assert_eq!(model.pages().len(), 3);

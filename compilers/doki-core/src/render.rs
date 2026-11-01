@@ -446,7 +446,7 @@ mod tests {
         for node in nodes {
             graph.insert(node.clone());
         }
-        SiteModel::build(&graph, false).0
+        SiteModel::build(&graph, false, "en").0
     }
 
     #[test]

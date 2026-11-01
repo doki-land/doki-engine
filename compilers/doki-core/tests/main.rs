@@ -32,7 +32,7 @@ fn node_from_md(rel: &str, source: &str) -> ContentNode {
 fn site_model(node: &ContentNode) -> (SiteModel, Vec<doki_core::Diagnostic>) {
     let mut graph = doki_core::ContentGraph::default();
     graph.insert(node.clone());
-    SiteModel::build(&graph, false)
+    SiteModel::build(&graph, false, "en")
 }
 
 fn theme_cfg() -> ProjectConfig {
@@ -242,7 +242,7 @@ fn markdown_links_rewrite_to_built_permalinks() {
     .unwrap();
 
     let graph = discover_markdown_content(dir.path(), "content").unwrap();
-    let (site, diagnostics) = SiteModel::build(&graph, false);
+    let (site, diagnostics) = SiteModel::build(&graph, false, "en");
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let cfg = ProjectConfig {
         title: "Site".into(),
@@ -286,7 +286,7 @@ fn fate_home_and_archive_list_site_model_posts_without_markdown_lists() {
     let examples = fate_examples_root();
     let graph = discover_markdown_content(&examples.join("_shared-corpus"), "content")
         .expect("shared corpus loads");
-    let (site, diagnostics) = SiteModel::build(&graph, false);
+    let (site, diagnostics) = SiteModel::build(&graph, false, "en");
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let posts = site.posts(false);
     assert_eq!(
@@ -361,7 +361,7 @@ fn site_model_exposes_page_permalink_to_layout() {
     );
 
     let graph = discover_markdown_content(dir.path(), "content").unwrap();
-    let (site, diagnostics) = SiteModel::build(&graph, false);
+    let (site, diagnostics) = SiteModel::build(&graph, false, "en");
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let node = graph.nodes.get(&ContentId("p.md".into())).unwrap();
     let page = render_page(dir.path(), &theme_cfg(), None, node, &site, false).unwrap();
@@ -404,7 +404,7 @@ fn fate_theme_build_session_ships_tag_taxonomy_pages() {
     );
     let result = session.commit_build().unwrap();
 
-    let (site, diagnostics) = SiteModel::build(session.graph(), false);
+    let (site, diagnostics) = SiteModel::build(session.graph(), false, "en");
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     assert_eq!(
         plan.content_count,
