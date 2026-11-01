@@ -156,6 +156,7 @@ pub fn render_page(
                 "date": post.date,
                 "description": post.description,
                 "type": post.page_type,
+                "tags": post.tags,
             })
         })
         .collect();
@@ -526,6 +527,37 @@ mod tests {
             page.html
         );
         assert!(page.layout_id.ends_with("home.doki"));
+    }
+
+    #[test]
+    fn site_posts_entries_carry_tags() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("layout.doki"),
+            "<tags>{% loop post in site.posts %}[{% post.tags %}]{% end loop %}</tags>\n",
+        )
+        .unwrap();
+        let cfg = ProjectConfig {
+            title: "Site".into(),
+            theme: Some(crate::config::ExtensionRef {
+                path: Some("./themes/docs".into()),
+                package: None,
+            }),
+            ..ProjectConfig::default()
+        };
+        let node = node_from_md(
+            "posts/2025-06-15-tagged.md",
+            "---\ntitle: Tagged\ntags: [Meta, 介绍]\n---\n\nx\n",
+        );
+        let site = site_of(&[node.clone()]);
+        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        assert!(
+            page.html.contains("Meta") && page.html.contains("介绍"),
+            "`site.posts` entries must carry `tags`, got: {}",
+            page.html
+        );
     }
 
     #[test]

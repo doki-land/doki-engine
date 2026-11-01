@@ -51,6 +51,8 @@ pub struct SitePage {
     pub description: Option<String>,
     pub date: Option<String>,
     pub draft: bool,
+    /// Raw front matter `tags` sequence (empty when the content declares none).
+    pub tags: Vec<String>,
 }
 
 /// Immutable site index built once per build from the full content graph.
@@ -124,6 +126,7 @@ impl SiteModel {
                 description: node.front_matter.description.clone(),
                 date: node.front_matter.date.clone(),
                 draft: node.front_matter.draft,
+                tags: node.front_matter.tags.clone(),
             });
         }
 
@@ -574,6 +577,28 @@ mod tests {
                 .as_deref(),
             Some("/pages/posts/2025-06-15-welcome-to-fate.html")
         );
+    }
+
+    #[test]
+    fn site_pages_carry_raw_tags_and_default_to_empty_sequence() {
+        let model = model(vec![
+            node(
+                "posts/a.md",
+                FrontMatter {
+                    tags: vec!["Meta".into(), "技术".into()],
+                    ..FrontMatter::default()
+                },
+            ),
+            plain("about.md"),
+        ]);
+        assert_eq!(
+            model.page("posts/a.md").unwrap().tags,
+            ["Meta", "技术"],
+            "SitePage keeps the raw front matter sequence"
+        );
+        assert!(model.page("about.md").unwrap().tags.is_empty());
+        let wire = serde_json::to_value(model.page("about.md").unwrap()).unwrap();
+        assert_eq!(wire["tags"], serde_json::json!([]));
     }
 
     #[test]

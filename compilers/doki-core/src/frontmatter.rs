@@ -21,6 +21,8 @@ pub struct FrontMatter {
     pub date: Option<String>,
     pub draft: bool,
     pub weight: Option<i64>,
+    /// Front matter `tags` sequence — the only input for tag taxonomy aggregation.
+    pub tags: Vec<String>,
     /// Full table as JSON for plugin / template context later.
     pub fields: Map<String, Value>,
 }
@@ -34,6 +36,7 @@ impl FrontMatter {
         let date = string_field(&fields, "date");
         let draft = bool_field(&fields, "draft").unwrap_or(false);
         let weight = i64_field(&fields, "weight");
+        let tags = tags_field(&fields);
         Self {
             title,
             description,
@@ -42,6 +45,7 @@ impl FrontMatter {
             date,
             draft,
             weight,
+            tags,
             fields,
         }
     }
@@ -158,6 +162,22 @@ fn i64_field(fields: &Map<String, Value>, key: &str) -> Option<i64> {
     }
 }
 
+/// Front matter `tags` sequence as raw strings; non-array values contribute nothing.
+fn tags_field(fields: &Map<String, Value>) -> Vec<String> {
+    match fields.get("tags") {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|item| match item {
+                Value::String(s) => Some(s.clone()),
+                Value::Number(n) => Some(n.to_string()),
+                Value::Bool(b) => Some(b.to_string()),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,5 +208,15 @@ mod tests {
         let doc = parse_document("# Just md\n").unwrap();
         assert!(doc.front_matter.title.is_none());
         assert_eq!(doc.body, "# Just md\n");
+    }
+
+    #[test]
+    fn tags_sequence_is_extracted_and_non_arrays_are_ignored() {
+        let doc = parse_document("---\ntags: [Meta, 技术, 42]\n---\n\nx\n").unwrap();
+        assert_eq!(doc.front_matter.tags, ["Meta", "技术", "42"]);
+        let scalar = parse_document("---\ntags: Meta\n---\n\nx\n").unwrap();
+        assert!(scalar.front_matter.tags.is_empty());
+        let missing = parse_document("---\ntitle: T\n---\n\nx\n").unwrap();
+        assert!(missing.front_matter.tags.is_empty());
     }
 }
