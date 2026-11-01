@@ -11,8 +11,9 @@
 use std::path::{Path, PathBuf};
 
 use doki_core::{
-    discover_markdown_content, language_for_ext, parse_document, render_page, ContentId,
-    ContentKind, ContentNode, ExtensionRef, FrontMatterDto, ProjectConfig, SiteModel,
+    discover_markdown_content, language_for_ext, parse_document, render_page, BuildMode,
+    BuildPhase, BuildSession, ContentId, ContentKind, ContentNode, ExtensionRef, FrontMatterDto,
+    LoadOptions, ProjectConfig, SiteModel, TaxonomyView, TAGS_INDEX_ID,
 };
 
 fn node_from_md(rel: &str, source: &str) -> ContentNode {
@@ -368,5 +369,150 @@ fn site_model_exposes_page_permalink_to_layout() {
         page.html.contains("<loc>/pages/p.html</loc>"),
         "layout should read `page.permalink`, got: {}",
         page.html
+    );
+}
+
+#[test]
+fn fate_theme_build_session_ships_tag_taxonomy_pages() {
+    let examples = fate_examples_root();
+    let abs = |p: &Path| p.to_string_lossy().replace('\\', "/");
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("doki.toml"),
+        format!(
+            "title = \"Fate · 清透角色的笔记\"\n\
+             description = \"Notes, images, and small observations.\"\n\
+             author = \"Fate\"\n\
+             base_url = \"https://fate.example.com\"\n\
+             content_dir = \"{}\"\n\
+             output_dir = \"dist\"\n\n\
+             [theme]\n\
+             path = \"{}\"\n",
+            abs(&examples.join("_shared-corpus/content")),
+            abs(&examples.join("doki-theme-fate")),
+        ),
+    )
+    .unwrap();
+
+    let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+    let plan = session.prepare_build(BuildMode::Production).unwrap();
+    assert_eq!(plan.phase, BuildPhase::ReadyToCommit);
+    assert!(
+        plan.diagnostics.is_empty(),
+        "the shared corpus must build without diagnostics, got: {:?}",
+        plan.diagnostics
+    );
+    let result = session.commit_build().unwrap();
+
+    let (site, diagnostics) = SiteModel::build(session.graph(), false);
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    assert_eq!(
+        plan.content_count,
+        site.pages().len(),
+        "every publishable page (content and taxonomy) goes through the session"
+    );
+
+    let index = site
+        .route_target("/tags/")
+        .expect("the derived index must own route `/tags/`");
+    assert_eq!(index.id.0, TAGS_INDEX_ID);
+    assert_eq!(index.output, "pages/tags.html");
+    assert!(
+        result
+            .committed_files
+            .iter()
+            .any(|f| f == "pages/tags.html"),
+        "commit must ship `pages/tags.html`, got: {:?}",
+        result.committed_files
+    );
+
+    let TaxonomyView::TagIndex(entries) = site.taxonomy(&index.id).expect("index view") else {
+        panic!("`/tags/` must resolve to the tag index view");
+    };
+    assert_eq!(entries[0].tag, "技术", "count desc puts the four-post tag first");
+    assert_eq!(entries[0].count, 4);
+    for excluded in ["about", "home"] {
+        assert!(
+            !entries.iter().any(|e| e.tag == excluded),
+            "non-post front matter tags never join the taxonomy"
+        );
+    }
+
+    let html = std::fs::read_to_string(dir.path().join("dist/pages/tags.html")).unwrap();
+    assert!(
+        html.contains(r#"<a href="/tags/">标签</a>"#),
+        "the tag index ships the Fate header nav, got: {html}"
+    );
+    assert!(
+        html.contains("Built with Doki · Fate theme"),
+        "`layouts/tags.dejavu` must render the Fate chrome, got: {html}"
+    );
+    for entry in entries {
+        assert!(
+            html.contains(&format!(r#"href="{}""#, entry.url)),
+            "`/tags/` links `{}` at its site-model URL, got: {html}",
+            entry.tag
+        );
+        assert!(
+            html.contains(&format!(">{} 篇<", entry.count)),
+            "`/tags/` shows count {} for `{}`, got: {html}",
+            entry.count,
+            entry.tag
+        );
+    }
+    assert_eq!(
+        html.matches(r#"href="/pages/tags/"#).count(),
+        entries.len(),
+        "the index renders exactly one link per tag row"
+    );
+
+    for entry in entries {
+        let id = ContentId(format!("taxonomy:tag/{}", entry.tag));
+        let page = site
+            .route_target(&format!("/tags/{}/", entry.tag))
+            .unwrap_or_else(|| panic!("`/tags/{}/{}` must be a real route", entry.tag, ""));
+        assert_eq!(page.id, id);
+        assert!(
+            result.committed_files.contains(&page.output),
+            "commit must ship `{}`, got: {:?}",
+            page.output,
+            result.committed_files
+        );
+        let TaxonomyView::Tag { posts, .. } = site.taxonomy(&id).expect("tag view") else {
+            panic!("`/tags/{}/{}` must resolve to a tag view", entry.tag, "");
+        };
+        assert_eq!(posts.len(), entry.count);
+
+        let html = std::fs::read_to_string(dir.path().join("dist").join(&page.output)).unwrap();
+        assert!(
+            html.contains(&format!(
+                r#"<h1 class="article-title">{}</h1>"#,
+                entry.display
+            )),
+            "tag page `{}` heads with the first raw tag `{}`, got: {html}",
+            entry.tag,
+            entry.display
+        );
+        for member in posts {
+            let member = site.page(&member.0).expect("member post page");
+            assert!(
+                html.contains(&format!(r#"href="{}""#, member.url)),
+                "tag page `{}` links member `{}`, got: {html}",
+                entry.tag,
+                member.rel_path
+            );
+        }
+        assert_eq!(
+            html.matches(r#"href="/pages/posts/"#).count(),
+            entry.count,
+            "tag page `{}` lists exactly its member posts",
+            entry.tag
+        );
+    }
+
+    let home = std::fs::read_to_string(dir.path().join("dist/pages/index.html")).unwrap();
+    assert!(
+        home.contains(r#"<a href="/tags/">标签</a>"#),
+        "the header nav `/tags/` is backed by the committed aggregate page"
     );
 }
