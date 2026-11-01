@@ -1,6 +1,8 @@
 //! Page render: Markdown → HTML, then Dejavu **public** facade for layouts.
 //!
-//! Depends only on the `dejavu` crate (not dejavu-language / dejavu-ir / dejavu-engine).
+//! Parsing and rendering go through the `dejavu` facade; the host registry that
+//! exposes `t(key, args?)` / `locale()` uses the `dejavu-ir` registry types
+//! (the facade does not re-export them). No dejavu-language / dejavu-engine.
 //! Layout delimiters are chosen by file extension:
 //!
 //! - `.doki` / `.dj` → `{% ... %}` code, `{# ... #}` comments
@@ -10,17 +12,23 @@
 //! Dejavu IR has **no** `output_start` / `output_end` — a single slot is classified as
 //! statement or expression by keyword.  There is no `{{ expr }}` or `<%= expr %>`.
 
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use dejavu::{Dejavu, Language, TemplateConfig};
+use dejavu_ir::{
+    Capability, CustomEntry, CustomError, CustomRegistry, Namespace, RenderOptions, render_ir_opts,
+};
 use notedown_formats::export::html::export_html;
 use notedown_formats::import::markdown::import_markdown_bytes;
 use notedown_ir::{Block, DocumentGraph, Inline, RelationEndpoint};
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use crate::config::{ExtensionRef, ProjectConfig};
+use crate::diagnostic::Diagnostic;
 use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
+use crate::i18n::I18n;
 use crate::site::{PageType, SiteModel, SitePage, TaxonomyView};
 
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
@@ -82,6 +90,136 @@ pub struct RenderedPage {
     pub html: String,
     /// Layout identity for dependency edges (`builtin:layout` or relative theme path).
     pub layout_id: String,
+    /// Render-phase diagnostics collected by the host registry (currently
+    /// `doki.i18n.missing-key` warnings from `t` lookups).
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+/// Dejavu host registry exposing the Doki i18n surface to layouts.
+///
+/// `t(key, args?)` resolves along the page locale's fallback chain and
+/// interpolates `{name}` placeholders; a miss renders the key literal and
+/// collects a `doki.i18n.missing-key` Warning (locale, key and attempted
+/// chain in the message). `locale()` returns the rendered page's locale.
+/// Only the `function` namespace is supplied; filters and tests stay built-in.
+struct I18nRegistry<'a> {
+    i18n: &'a I18n,
+    locale: String,
+    entries: Vec<CustomEntry>,
+    diagnostics: RefCell<Vec<Diagnostic>>,
+}
+
+impl<'a> I18nRegistry<'a> {
+    fn new(i18n: &'a I18n, locale: &str) -> Self {
+        Self {
+            i18n,
+            locale: locale.to_string(),
+            entries: vec![
+                CustomEntry {
+                    namespace: Namespace::Function,
+                    name: "t".into(),
+                    aliases: Vec::new(),
+                    min_args: 1,
+                    max_args: 2,
+                    capability: Capability::Pure,
+                },
+                CustomEntry {
+                    namespace: Namespace::Function,
+                    name: "locale".into(),
+                    aliases: Vec::new(),
+                    min_args: 0,
+                    max_args: 0,
+                    capability: Capability::Pure,
+                },
+            ],
+            diagnostics: RefCell::new(Vec::new()),
+        }
+    }
+
+    fn into_diagnostics(self) -> Vec<Diagnostic> {
+        self.diagnostics.into_inner()
+    }
+}
+
+impl CustomRegistry for I18nRegistry<'_> {
+    fn entries(&self) -> &[CustomEntry] {
+        &self.entries
+    }
+
+    fn apply_filter(&self, name: &str, _value: &Value, _args: &[Value]) -> Result<Value, CustomError> {
+        Err(CustomError::new(format!(
+            "doki registry supplies no `{name}` filter"
+        )))
+    }
+
+    fn call_function(&self, name: &str, args: &[Value]) -> Result<Value, CustomError> {
+        match name {
+            "locale" => Ok(Value::String(self.locale.clone())),
+            "t" => {
+                let Some(Value::String(key)) = args.first() else {
+                    return Err(CustomError::new(
+                        "`t` expects a string message key as its first argument",
+                    ));
+                };
+                let owned: Option<Map<String, Value>> = match args.get(1) {
+                    None | Some(Value::Null) => None,
+                    Some(Value::Object(map)) => Some(map.clone()),
+                    Some(other) => {
+                        return Err(CustomError::new(format!(
+                            "`t` expects an object of interpolation arguments, got `{other}`"
+                        )));
+                    }
+                };
+                let (text, diagnostic) = self.i18n.translate(&self.locale, key, owned.as_ref());
+                if let Some(diagnostic) = diagnostic {
+                    self.diagnostics.borrow_mut().push(diagnostic);
+                }
+                Ok(Value::String(text))
+            }
+            other => Err(CustomError::new(format!(
+                "unknown doki registry function `{other}`"
+            ))),
+        }
+    }
+
+    fn apply_test(&self, name: &str, _value: &Value, _args: &[Value]) -> Result<bool, CustomError> {
+        Err(CustomError::new(format!(
+            "doki registry supplies no `{name}` test"
+        )))
+    }
+}
+
+/// Parse and render one layout source with the i18n host registry attached.
+///
+/// Failures keep the historical message shape (page rel path plus layout
+/// identity) so diagnostics name both the layout and the page.
+fn render_layout(
+    layout_source: &str,
+    ctx: &Value,
+    language: &Language,
+    layout_id: &str,
+    page_rel: &str,
+    i18n: &I18n,
+    locale: &str,
+) -> CoreResult<RenderedPage> {
+    let failure = |detail: String| {
+        CoreError::build(format!(
+            "doki render failed for `{page_rel}` (layout {layout_id}): {detail}"
+        ))
+    };
+    let doc = Dejavu::parse_with(layout_source, language).map_err(|e| failure(e.to_string()))?;
+    let registry = I18nRegistry::new(i18n, locale);
+    let options = RenderOptions {
+        name: Some(layout_id.to_string()),
+        custom: Some(&registry),
+        ..RenderOptions::default()
+    };
+    let html = render_ir_opts(&doc, ctx, options, None).map_err(|e| failure(e.to_string()))?;
+    Ok(RenderedPage {
+        html,
+        layout_id: layout_id.to_string(),
+        diagnostics: registry.into_diagnostics(),
+    })
 }
 
 /// Render one content node through Markdown + Dejavu layout.
@@ -102,6 +240,7 @@ pub fn render_page(
     theme_root: Option<&Path>,
     node: &ContentNode,
     site: &SiteModel,
+    i18n: &I18n,
     include_drafts: bool,
 ) -> CoreResult<RenderedPage> {
     let page = site
@@ -143,24 +282,26 @@ pub fn render_page(
         if !map.contains_key("lang") {
             map.insert("lang".into(), Value::String(config.lang.clone()));
         }
+        map.insert("locale".into(), Value::String(page.locale.clone()));
     }
 
     let ctx = json!({
-        "site": site_json(config, site, include_drafts),
+        "site": site_json(config, site, include_drafts, i18n),
         "page": page_fields,
         "title": title,
         "content": content_html,
     });
 
     let language = language_for_ext(layout_ext.as_deref());
-    let html = Dejavu::render_source_with(&layout_source, &ctx, &language).map_err(|e| {
-        CoreError::build(format!(
-            "doki render failed for `{}` (layout {layout_id}): {e}",
-            node.rel_path
-        ))
-    })?;
-
-    Ok(RenderedPage { html, layout_id })
+    render_layout(
+        &layout_source,
+        &ctx,
+        &language,
+        &layout_id,
+        &node.rel_path,
+        i18n,
+        &page.locale,
+    )
 }
 
 /// Render one derived taxonomy page (`/tags/` index or `/tags/<slug>/`).
@@ -178,6 +319,7 @@ pub fn render_taxonomy_page(
     page: &SitePage,
     view: &TaxonomyView,
     site: &SiteModel,
+    i18n: &I18n,
     include_drafts: bool,
 ) -> CoreResult<RenderedPage> {
     let names: &[&str] = match view {
@@ -213,10 +355,11 @@ pub fn render_taxonomy_page(
         "type": serde_json::to_value(page.page_type).expect("page type serializes"),
         "permalink": page.url,
         "lang": config.lang,
+        "locale": page.locale,
     });
 
     let ctx = json!({
-        "site": site_json(config, site, include_drafts),
+        "site": site_json(config, site, include_drafts, i18n),
         "page": page_json,
         "taxonomy": taxonomy,
         "title": title,
@@ -224,14 +367,15 @@ pub fn render_taxonomy_page(
     });
 
     let language = language_for_ext(layout_ext.as_deref());
-    let html = Dejavu::render_source_with(&layout_source, &ctx, &language).map_err(|e| {
-        CoreError::build(format!(
-            "doki render failed for `{}` (layout {layout_id}): {e}",
-            page.rel_path
-        ))
-    })?;
-
-    Ok(RenderedPage { html, layout_id })
+    render_layout(
+        &layout_source,
+        &ctx,
+        &language,
+        &layout_id,
+        &page.rel_path,
+        i18n,
+        &page.locale,
+    )
 }
 
 /// One `site.posts` / `taxonomy.posts` entry as layouts consume it.
@@ -247,12 +391,19 @@ fn post_entry(post: &SitePage) -> Value {
 }
 
 /// The `site` template object shared by content and taxonomy layouts.
-fn site_json(config: &ProjectConfig, site: &SiteModel, include_drafts: bool) -> Value {
+fn site_json(
+    config: &ProjectConfig,
+    site: &SiteModel,
+    include_drafts: bool,
+    i18n: &I18n,
+) -> Value {
     json!({
         "title": config.title,
         "description": config.description,
         "baseUrl": config.base_url,
         "lang": config.lang,
+        "locales": i18n.locales(),
+        "default_locale": i18n.default_locale(),
         "author": config.author,
         "posts": site
             .posts(include_drafts)
@@ -449,6 +600,11 @@ mod tests {
         SiteModel::build(&graph, false, "en").0
     }
 
+    fn single_i18n() -> crate::i18n::I18n {
+        let dir = tempfile::tempdir().unwrap();
+        crate::i18n::I18n::load(dir.path(), &ProjectConfig::default()).0
+    }
+
     #[test]
     fn builtin_layout_renders_markdown_html() {
         let dir = tempfile::tempdir().unwrap();
@@ -458,7 +614,7 @@ mod tests {
         };
         let node = node_from_md("hello.md", "---\ntitle: Hello\n---\n\n# Heading\n\npara\n");
         let site = site_of(&[node.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
         assert!(page.html.contains("<title>Hello</title>"));
         assert!(
             page.html.contains(r#"<html lang="en">"#),
@@ -479,7 +635,7 @@ mod tests {
         let cfg = ProjectConfig::default();
         let node = node_from_md("fr.md", "---\nlang: fr\n---\n\nbonjour\n");
         let site = site_of(&[node.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains(r#"<html lang="fr">"#),
             "expected front matter `lang` to win, got: {}",
@@ -507,7 +663,7 @@ mod tests {
         };
         let node = node_from_md("p.md", "---\ntitle: T\n---\n\n*x*\n");
         let site = site_of(&[node.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
         assert!(page.html.contains("<wrap>T:"));
         assert!(
             page.html.contains("<em>x</em>"),
@@ -548,7 +704,7 @@ mod tests {
 
         let about = node_from_md("about.md", "---\ntitle: About\n---\n\nx\n");
         let site = site_of(&[about.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &about, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &about, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains("<by-type>About</by-type>"),
             "`page` type layout must win over the generic `layout` file, got: {}",
@@ -561,7 +717,7 @@ mod tests {
             "---\ntitle: Contact\nlayout: custom\n---\n\nx\n",
         );
         let site = site_of(&[contact.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &contact, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &contact, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html
                 .contains("<by-front-matter>Contact</by-front-matter>"),
@@ -601,7 +757,7 @@ mod tests {
         };
         let home = node_from_md("index.md", "---\ntitle: Home\n---\n\nx\n");
         let site = site_of(&[home.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &home, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &home, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains("<home-doki>Home</home-doki>"),
             "`.doki` must win the extension order inside `home`, got: {}",
@@ -633,7 +789,7 @@ mod tests {
             "---\ntitle: Tagged\ntags: [Meta, 介绍]\n---\n\nx\n",
         );
         let site = site_of(&[node.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains("Meta") && page.html.contains("介绍"),
             "`site.posts` entries must carry `tags`, got: {}",
@@ -661,7 +817,7 @@ mod tests {
         };
         let node = node_from_md("posts/2025-06-15-hello.md", "---\ntitle: Hi\n---\n\nx\n");
         let site = site_of(&[node.clone()]);
-        let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+        let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains(
                 "<ctx>post|/posts/hello/|/pages/posts/2025-06-15-hello.html|/pages/posts/2025-06-15-hello.html</ctx>"
@@ -716,7 +872,7 @@ mod tests {
 
         let index = site.route_target("/tags/").expect("index page");
         let view = site.taxonomy(&index.id).expect("index view");
-        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains(
                 "<idx>Ppage|/tags/|/pages/tags.html|/pages/tags.html|en[meta|Meta|2|/pages/tags/meta.html][技术|技术|1|/pages/tags/技术.html](B)(A)</idx>"
@@ -727,7 +883,7 @@ mod tests {
 
         let tag = site.route_target("/tags/meta/").expect("tag page");
         let view = site.taxonomy(&tag.id).expect("tag view");
-        let page = render_taxonomy_page(dir.path(), &cfg, None, tag, view, &site, false).unwrap();
+        let page = render_taxonomy_page(dir.path(), &cfg, None, tag, view, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains(
                 "<tag>Tmeta|Meta|/pages/tags/meta.html|Meta(B:/pages/posts/2025-10-20-b.html:post)(A:/pages/posts/2025-06-15-a.html:post)</tag>"
@@ -758,7 +914,7 @@ mod tests {
         let index = site.route_target("/tags/").expect("index page");
         let view = site.taxonomy(&index.id).expect("index view");
 
-        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains("<page-fallback>Site</page-fallback>"),
             "taxonomy pages fall back to `layouts/page.<ext>`, got: {}",
@@ -775,7 +931,7 @@ mod tests {
             "<tags-layout><% title %></tags-layout>\n",
         )
         .unwrap();
-        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, false).unwrap();
+        let page = render_taxonomy_page(dir.path(), &cfg, None, index, view, &site, &single_i18n(), false).unwrap();
         assert!(
             page.html.contains("<tags-layout>"),
             "`layouts/tags.<ext>` must win over `page`, got: {}",
@@ -791,12 +947,157 @@ mod tests {
             index,
             view,
             &site,
+            &single_i18n(),
             false,
         )
         .unwrap();
         assert!(
             builtin.layout_id.starts_with("builtin:"),
             "a theme without layouts falls back to the builtin layout"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Bilingual fixtures: host registry `t` / `locale`, fallback, missing key
+    // -----------------------------------------------------------------------
+
+    fn bilingual_config() -> ProjectConfig {
+        ProjectConfig {
+            title: "Site".into(),
+            theme: Some(crate::config::ExtensionRef {
+                path: Some("./themes/docs".into()),
+                package: None,
+            }),
+            i18n: Some(crate::config::I18nConfig {
+                locales: vec!["en".into(), "zh".into()],
+                fallback: {
+                    let mut f = std::collections::BTreeMap::new();
+                    f.insert("zh".to_string(), "en".to_string());
+                    f
+                },
+            }),
+            ..ProjectConfig::default()
+        }
+    }
+
+    fn bilingual_i18n(root: &Path) -> crate::i18n::I18n {
+        let locales = root.join("locales");
+        std::fs::create_dir_all(&locales).unwrap();
+        std::fs::write(
+            locales.join("en.json5"),
+            "{ greet: \"Hello {name}\", only_en: \"x\" }",
+        )
+        .unwrap();
+        std::fs::write(locales.join("zh.json5"), "{ greet: \"你好 {name}\" }").unwrap();
+        crate::i18n::I18n::load(root, &bilingual_config()).0
+    }
+
+    fn zh_node(rel: &str) -> ContentNode {
+        node_from_md(rel, &format!("---\ntitle: {rel}\nlang: zh\n---\n\nx\n"))
+    }
+
+    #[test]
+    fn registry_t_and_locale_follow_the_page_locale() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("layout.doki"),
+            "<i18n>{% t(\"greet\", { name: \"林\" }) %}|{% locale() %}|{% page.locale %}|{% site.default_locale %}|{% loop l in site.locales %}[{% l %}]{% end loop %}</i18n>\n",
+        )
+        .unwrap();
+        let node = zh_node("greet.md");
+        let site = site_of(&[node.clone()]);
+        let page = render_page(
+            dir.path(),
+            &bilingual_config(),
+            None,
+            &node,
+            &site,
+            &bilingual_i18n(dir.path()),
+            false,
+        )
+        .unwrap();
+        assert!(
+            page.html
+                .contains("<i18n>你好 林|zh|zh|en|[en][zh]</i18n>"),
+            "`t` must interpolate through the page locale and the context must expose `page.locale` / `site.locales` / `site.default_locale`, got: {}",
+            page.html
+        );
+        assert!(page.diagnostics.is_empty(), "{:?}", page.diagnostics);
+    }
+
+    #[test]
+    fn t_falls_back_along_the_chain_without_warning() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("layout.doki"),
+            "<fb>{% t(\"only_en\") %}</fb>\n",
+        )
+        .unwrap();
+        let node = zh_node("fb.md");
+        let site = site_of(&[node.clone()]);
+        let page = render_page(
+            dir.path(),
+            &bilingual_config(),
+            None,
+            &node,
+            &site,
+            &bilingual_i18n(dir.path()),
+            false,
+        )
+        .unwrap();
+        assert!(
+            page.html.contains("<fb>x</fb>"),
+            "`only_en` must resolve through the `zh -> en` fallback chain, got: {}",
+            page.html
+        );
+        assert!(page.diagnostics.is_empty(), "{:?}", page.diagnostics);
+    }
+
+    #[test]
+    fn missing_key_renders_the_literal_and_warns_with_the_attempted_chain() {
+        let dir = tempfile::tempdir().unwrap();
+        let layouts = dir.path().join("themes/docs/layouts");
+        std::fs::create_dir_all(&layouts).unwrap();
+        std::fs::write(
+            layouts.join("layout.doki"),
+            "<miss>{% t(\"nope\") %}</miss>\n",
+        )
+        .unwrap();
+        let node = zh_node("miss.md");
+        let site = site_of(&[node.clone()]);
+        let page = render_page(
+            dir.path(),
+            &bilingual_config(),
+            None,
+            &node,
+            &site,
+            &bilingual_i18n(dir.path()),
+            false,
+        )
+        .unwrap();
+        assert!(
+            page.html.contains("<miss>nope</miss>"),
+            "a missing key must render the key literal, got: {}",
+            page.html
+        );
+        let warnings: Vec<&Diagnostic> = page
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == crate::i18n::MISSING_KEY_CODE)
+            .collect();
+        assert_eq!(warnings.len(), 1, "{:?}", page.diagnostics);
+        let warning = warnings[0];
+        assert_eq!(warning.severity, crate::diagnostic::Severity::Warning);
+        assert!(
+            warning.message.contains("`nope`")
+                && warning.message.contains("`zh`")
+                && warning.message.contains("zh -> en"),
+            "the warning must name the key, the locale and the attempted chain, got: {}",
+            warning.message
         );
     }
 }

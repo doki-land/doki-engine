@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use doki_core::{
     discover_markdown_content, language_for_ext, parse_document, render_page, BuildMode,
     BuildPhase, BuildSession, ContentId, ContentKind, ContentNode, ExtensionRef, FrontMatterDto,
-    LoadOptions, ProjectConfig, SiteModel, TaxonomyView, TAGS_INDEX_ID,
+    LoadOptions, ProjectConfig, SiteModel, TaxonomyView, MISSING_KEY_CODE, TAGS_INDEX_ID,
 };
 
 fn node_from_md(rel: &str, source: &str) -> ContentNode {
@@ -33,6 +33,11 @@ fn site_model(node: &ContentNode) -> (SiteModel, Vec<doki_core::Diagnostic>) {
     let mut graph = doki_core::ContentGraph::default();
     graph.insert(node.clone());
     SiteModel::build(&graph, false, "en")
+}
+
+fn single_i18n() -> doki_core::I18n {
+    let dir = tempfile::tempdir().unwrap();
+    doki_core::I18n::load(dir.path(), &ProjectConfig::default()).0
 }
 
 fn theme_cfg() -> ProjectConfig {
@@ -87,7 +92,7 @@ fn dj_layout_renders_curly_delimiters_and_keeps_angle_brackets_literal() {
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
     let (site, diagnostics) = site_model(&node);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, false).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, &single_i18n(), false).unwrap();
     assert!(
         page.html.contains("<dj>T|<% literal %></dj>"),
         "expected curly delimiters parsed and `<% %>` literal, got: {}",
@@ -111,7 +116,7 @@ fn html_layout_renders_default_delimiters_without_doki_fallback() {
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
     let (site, diagnostics) = site_model(&node);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, false).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, &single_i18n(), false).unwrap();
     assert!(
         page.html
             .contains("<html-layout>T|{% not-code %}</html-layout>"),
@@ -130,7 +135,7 @@ fn extensionless_builtin_fallback_uses_the_default_profile() {
     let node = node_from_md("b.md", "---\ntitle: B\n---\n\nx\n");
     let (site, diagnostics) = site_model(&node);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let page = render_page(dir.path(), &cfg, None, &node, &site, false).unwrap();
+    let page = render_page(dir.path(), &cfg, None, &node, &site, &single_i18n(), false).unwrap();
     assert!(
         page.layout_id.starts_with("builtin:"),
         "expected builtin layout, got: {}",
@@ -160,7 +165,7 @@ fn mixed_catalog_prefers_doki_over_dejavu_and_dj_candidates() {
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
     let (site, diagnostics) = site_model(&node);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, false).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, &node, &site, &single_i18n(), false).unwrap();
     assert!(
         page.html.contains("<from-doki>T</from-doki>"),
         "`.doki` should win the candidate order, got: {}",
@@ -179,7 +184,7 @@ fn side_by_side_catalogs_render_each_layout_with_its_own_profile() {
     let post = node_from_md("a.md", "---\ntitle: A\nlayout: post\n---\n\nx\n");
     let (post_site, diagnostics) = site_model(&post);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let rendered_post = render_page(dir.path(), &cfg, None, &post, &post_site, false).unwrap();
+    let rendered_post = render_page(dir.path(), &cfg, None, &post, &post_site, &single_i18n(), false).unwrap();
     assert!(
         rendered_post.html.contains("<p>A</p>"),
         "`.doki` layout should parse `{{% %}}`, got: {}",
@@ -190,7 +195,7 @@ fn side_by_side_catalogs_render_each_layout_with_its_own_profile() {
     let page = node_from_md("b.md", "---\ntitle: B\nlayout: page\n---\n\nx\n");
     let (page_site, diagnostics) = site_model(&page);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let rendered_page = render_page(dir.path(), &cfg, None, &page, &page_site, false).unwrap();
+    let rendered_page = render_page(dir.path(), &cfg, None, &page, &page_site, &single_i18n(), false).unwrap();
     assert!(
         rendered_page.html.contains("<q>B</q>"),
         "`.dejavu` layout should parse `<% %>`, got: {}",
@@ -206,7 +211,7 @@ fn broken_doki_layout_failure_names_the_layout_and_page() {
     let node = node_from_md("p.md", "---\ntitle: T\n---\n\nbody\n");
     let (site, diagnostics) = site_model(&node);
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
-    let err = render_page(dir.path(), &theme_cfg(), None, &node, &site, false)
+    let err = render_page(dir.path(), &theme_cfg(), None, &node, &site, &single_i18n(), false)
         .expect_err("stray `{% end if %}` must fail the render");
     let msg = err.to_string();
     assert!(
@@ -250,7 +255,7 @@ fn markdown_links_rewrite_to_built_permalinks() {
     };
 
     let index = graph.nodes.get(&ContentId("index.md".into())).unwrap();
-    let page = render_page(dir.path(), &cfg, None, index, &site, false).unwrap();
+    let page = render_page(dir.path(), &cfg, None, index, &site, &single_i18n(), false).unwrap();
     assert!(
         page.html
             .contains(r#"<a href="/pages/posts/2025-06-15-welcome-to-fate.html">"#),
@@ -273,7 +278,7 @@ fn markdown_links_rewrite_to_built_permalinks() {
         .nodes
         .get(&ContentId("posts/2025-06-15-welcome-to-fate.md".into()))
         .unwrap();
-    let page = render_page(dir.path(), &cfg, None, post, &site, false).unwrap();
+    let page = render_page(dir.path(), &cfg, None, post, &site, &single_i18n(), false).unwrap();
     assert!(page.html.contains(r#"<a href="/pages/about.html">"#));
 }
 
@@ -312,7 +317,7 @@ fn fate_home_and_archive_list_site_model_posts_without_markdown_lists() {
             .nodes
             .get(&ContentId(rel.into()))
             .unwrap_or_else(|| panic!("`{rel}` must exist in the shared corpus"));
-        let page = render_page(&examples, &cfg, Some(&theme), node, &site, false)
+        let page = render_page(&examples, &cfg, Some(&theme), node, &site, &single_i18n(), false)
             .expect("fate layout renders");
         assert!(
             page.layout_id.ends_with(layout_file),
@@ -364,7 +369,7 @@ fn site_model_exposes_page_permalink_to_layout() {
     let (site, diagnostics) = SiteModel::build(&graph, false, "en");
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     let node = graph.nodes.get(&ContentId("p.md".into())).unwrap();
-    let page = render_page(dir.path(), &theme_cfg(), None, node, &site, false).unwrap();
+    let page = render_page(dir.path(), &theme_cfg(), None, node, &site, &single_i18n(), false).unwrap();
     assert!(
         page.html.contains("<loc>/pages/p.html</loc>"),
         "layout should read `page.permalink`, got: {}",
@@ -515,4 +520,65 @@ fn fate_theme_build_session_ships_tag_taxonomy_pages() {
         home.contains(r#"<a href="/tags/">标签</a>"#),
         "the header nav `/tags/` is backed by the committed aggregate page"
     );
+}
+
+#[test]
+fn bilingual_session_build_prefixes_locale_routes_and_carries_missing_key_warning() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("doki.toml"),
+        "title = \"Bilingual\"\nlang = \"en\"\n\n[i18n]\nlocales = [\"en\", \"zh\"]\n\n[i18n.fallback]\nzh = \"en\"\n\n[theme]\npath = \"./themes/docs\"\n",
+    )
+    .unwrap();
+    let locales = dir.path().join("locales");
+    std::fs::create_dir_all(&locales).unwrap();
+    std::fs::write(locales.join("en.json5"), "{ greet: \"Hello {name}\" }").unwrap();
+    std::fs::write(locales.join("zh.json5"), "{ greet: \"你好 {name}\" }").unwrap();
+    let content = dir.path().join("content");
+    std::fs::create_dir_all(&content).unwrap();
+    std::fs::write(
+        content.join("post.md"),
+        "---\ntitle: Post\nlang: zh\n---\n\nx\n",
+    )
+    .unwrap();
+    write_layout(
+        dir.path(),
+        "layout.doki",
+        "<i18n>{% t(\"greet\", { name: \"林\" }) %}|{% locale() %}|{% t(\"nope\") %}</i18n>\n",
+    );
+
+    let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
+    let plan = session.prepare_build(BuildMode::Production).unwrap();
+    assert_eq!(plan.phase, BuildPhase::ReadyToCommit);
+    let missing: Vec<&doki_core::Diagnostic> = plan
+        .diagnostics
+        .iter()
+        .filter(|d| d.code == MISSING_KEY_CODE)
+        .collect();
+    assert_eq!(missing.len(), 1, "{:?}", plan.diagnostics);
+    assert!(
+        missing[0].message.contains("`nope`")
+            && missing[0].message.contains("`zh`")
+            && missing[0].message.contains("zh -> en"),
+        "the render-phase warning must reach the build plan, got: {}",
+        missing[0].message
+    );
+
+    let result = session.commit_build().unwrap();
+    assert!(
+        result.committed_files.iter().any(|f| f == "pages/post.html"),
+        "commit must ship `pages/post.html`, got: {:?}",
+        result.committed_files
+    );
+    let html = std::fs::read_to_string(dir.path().join("dist/pages/post.html")).unwrap();
+    assert!(
+        html.contains("<i18n>你好 林|zh|nope</i18n>"),
+        "the zh page must render through the registry with the page locale, got: {html}"
+    );
+
+    let (site, diagnostics) = SiteModel::build(session.graph(), false, "en");
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let page = site.page("post.md").expect("post page");
+    assert_eq!(page.locale, "zh", "front matter `lang` selects the page locale");
+    assert_eq!(page.route, "/zh/post/", "non-default locales prefix the route");
 }

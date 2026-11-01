@@ -11,15 +11,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::json;
 
 use crate::config::{load_project_config, LoadOptions, ProjectConfig, ProjectPaths};
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{Diagnostic, Severity};
 use crate::error::{CoreError, CoreResult};
 use crate::graph::{discover_markdown_content, load_markdown_node, ContentGraph, ContentId};
+use crate::i18n::I18n;
 use crate::protocol::{
     BuildMode, BuildPhase, BuildPlan, BuildResult, ExplainRebuild, ExtensionKind,
     ExtensionSourceKind, FileChange, FileChangeKind, HookKind, HookWorkItem, InvalidationResult,
     PluginResult, ResolvedExtension,
 };
-use crate::render::{render_page, render_taxonomy_page};
+use crate::render::{RenderedPage, render_page, render_taxonomy_page};
 use crate::site::{output_rel, SiteModel, SitePage, ROUTE_CONFLICT_CODE};
 use crate::staging::StagingArea;
 
@@ -43,6 +44,8 @@ struct ActiveBuild {
     cancelled: bool,
     /// Site model authority for render jobs, hook payloads and manifests.
     site: SiteModel,
+    /// Loaded message catalogs and fallback chains for the `t` / `locale` registry.
+    i18n: I18n,
     staging: StagingArea,
     /// `None` = render all publishable pages; `Some` = only these ids (incremental).
     render_ids: Option<BTreeSet<ContentId>>,
@@ -213,21 +216,30 @@ impl BuildSession {
         let output_root = self.paths.root.join(&self.config.output_dir);
         let staging = StagingArea::create(&output_root, &build_id)?;
 
-        let (site, site_diagnostics) =
+        let (site, mut diagnostics) =
             SiteModel::build(&self.graph, self.include_drafts(mode), &self.config.lang);
-        let conflicts: Vec<Diagnostic> = site_diagnostics
+        let conflicts: Vec<Diagnostic> = diagnostics
             .iter()
             .filter(|diagnostic| diagnostic.code == ROUTE_CONFLICT_CODE)
             .cloned()
             .collect();
 
+        let (i18n, i18n_diagnostics) = I18n::load(&self.paths.root, &self.config);
+        let i18n_errors: Vec<Diagnostic> = i18n_diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.severity == Severity::Error)
+            .cloned()
+            .collect();
+        diagnostics.extend(i18n_diagnostics);
+
         let active = ActiveBuild {
             build_id,
             mode,
             phase: BuildPhase::ValidateConfig,
-            diagnostics: site_diagnostics,
+            diagnostics,
             cancelled: false,
             site,
+            i18n,
             staging,
             render_ids,
             full_output_replace,
@@ -236,6 +248,15 @@ impl BuildSession {
         if !conflicts.is_empty() {
             active.staging.discard();
             let message = conflicts
+                .iter()
+                .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message))
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Err(CoreError::build(message));
+        }
+        if !i18n_errors.is_empty() {
+            active.staging.discard();
+            let message = i18n_errors
                 .iter()
                 .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message))
                 .collect::<Vec<_>>()
@@ -701,8 +722,10 @@ impl BuildSession {
         let root = self.paths.root.clone();
         let theme_root = self.theme_fs_root();
         let site = &self.active.as_ref().expect("active build").site;
+        let i18n = &self.active.as_ref().expect("active build").i18n;
         let mut jobs: Vec<(String, String)> = Vec::new();
         let mut layout_deps: Vec<(ContentId, String)> = Vec::new();
+        let mut render_diagnostics: Vec<Diagnostic> = Vec::new();
         for id in &queue {
             let page = site
                 .pages()
@@ -718,6 +741,7 @@ impl BuildSession {
                     theme_root.as_deref(),
                     node,
                     site,
+                    i18n,
                     include_drafts,
                 )?;
                 layout_deps.push((id.clone(), rendered.layout_id.clone()));
@@ -730,6 +754,7 @@ impl BuildSession {
                     page,
                     view,
                     site,
+                    i18n,
                     include_drafts,
                 )?
             } else {
@@ -738,13 +763,21 @@ impl BuildSession {
                     id.0
                 )));
             };
-            jobs.push((page.output.clone(), rendered.html));
+            let RenderedPage { html, diagnostics, .. } = rendered;
+            render_diagnostics.extend(diagnostics);
+            jobs.push((page.output.clone(), html));
         }
 
         for (id, layout_id) in &layout_deps {
             let dep = ContentId(format!("@layout/{layout_id}"));
             self.graph.edges.entry(id.clone()).or_default().insert(dep);
         }
+
+        self.active
+            .as_mut()
+            .expect("active build")
+            .diagnostics
+            .extend(render_diagnostics);
 
         let public_dir = self.paths.root.join(&self.config.public_dir);
         let theme_assets = self.theme_fs_root().map(|r| r.join("assets"));

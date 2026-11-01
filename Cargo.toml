@@ -24,5 +24,6 @@ thiserror = "2"
 toml = "0.8"
 hex = "0.4"
 dejavu = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu" }
+dejavu-ir = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu-ir" }
 notedown-formats = { git = "https://github.com/notedge/notedown.git", rev = "3c01bea86d5824771ff12e26dd50494f0199c0e7", default-features = false }
 notedown-ir = { git = "https://github.com/notedge/notedown.git", rev = "3c01bea86d5824771ff12e26dd50494f0199c0e7" }

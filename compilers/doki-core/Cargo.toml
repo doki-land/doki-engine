@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 dejavu = { workspace = true }
+dejavu-ir = { workspace = true }
 figment = { workspace = true }
 hex = { workspace = true }
 miette = { workspace = true }
