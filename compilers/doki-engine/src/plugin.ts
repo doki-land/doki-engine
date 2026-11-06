@@ -2,7 +2,7 @@
  * RETIRED transitional PluginManager — not a build authority.
  *
  * Official plugins use `@doki-land/plugin` + the segmented N-API hook protocol
- * driven by `@doki-land/doki`. See `决策和进度表/doki-rust-build-kernel.md`.
+ * driven by `@doki-land/doki`.
  */
 
 import type { BuildResult } from "./builder.js";
