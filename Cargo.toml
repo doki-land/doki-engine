@@ -26,8 +26,8 @@ hex = "0.4"
 dejavu = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu" }
 dejavu-ir = { path = "../dejavu-language/projects/dejavu.rs/crates/dejavu-ir" }
 # Shared template contract + dejavu input engine + framework contract from `document.rs`.
-document-template = { git = "https://github.com/notedge/document.rs", rev = "5de8b97587de6969b1d1c83cb4b6ac4b805cdc70" }
-document-template-framework = { git = "https://github.com/notedge/document.rs", rev = "5de8b97587de6969b1d1c83cb4b6ac4b805cdc70" }
-document-template-input-dejavu = { git = "https://github.com/notedge/document.rs", rev = "5de8b97587de6969b1d1c83cb4b6ac4b805cdc70" }
+template = { git = "https://github.com/notedge/document.rs", rev = "f4217bf76831d61430800f7133142fe53ccfc456" }
+template-framework = { git = "https://github.com/notedge/document.rs", rev = "f4217bf76831d61430800f7133142fe53ccfc456" }
+template-input-dejavu = { git = "https://github.com/notedge/document.rs", rev = "f4217bf76831d61430800f7133142fe53ccfc456" }
 notedown-formats = { git = "https://github.com/notedge/notedown.git", rev = "3c01bea86d5824771ff12e26dd50494f0199c0e7", default-features = false }
 notedown-ir = { git = "https://github.com/notedge/notedown.git", rev = "3c01bea86d5824771ff12e26dd50494f0199c0e7" }

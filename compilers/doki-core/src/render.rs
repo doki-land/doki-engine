@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use dejavu::{Language, TemplateConfig};
 use dejavu_ir::{Capability, CustomEntry, CustomError, CustomRegistry, Namespace};
-use document_template_framework::{FrameworkRequest, TemplateFramework};
+use template_framework::{FrameworkRequest, TemplateFramework};
 use notedown_formats::export::html::export_html;
 use notedown_formats::import::markdown::import_markdown_bytes;
 use notedown_ir::{Block, DocumentGraph, Inline, RelationEndpoint};

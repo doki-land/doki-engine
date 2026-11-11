@@ -5,11 +5,11 @@
 //! parser、转义或空白语义。
 
 use dejavu_ir::{CustomRegistry, RenderOptions as IrRenderOptions, render_ir_opts};
-use document_template::{
+use template::{
     RenderOptions, TemplateContentKind, TemplateError, TemplateId, TemplateStatus,
 };
-use document_template_framework::{FrameworkCapability, FrameworkOutput, FrameworkRequest, TemplateFramework};
-use document_template_input_dejavu::{
+use template_framework::{FrameworkCapability, FrameworkOutput, FrameworkRequest, TemplateFramework};
+use template_input_dejavu::{
     language_for_path, parse_with, template_error_from_diagnostic, template_error_from_ir,
     ParseError,
 };
@@ -57,7 +57,7 @@ impl TemplateFramework for DokiFramework<'_> {
     fn render(&self, request: &FrameworkRequest<'_>) -> Result<FrameworkOutput, TemplateError> {
         let id = request
             .loader
-            .resolve(request.entry, None, document_template_input_dejavu::EXTENSIONS)?;
+            .resolve(request.entry, None, template_input_dejavu::EXTENSIONS)?;
         let source = request.loader.source(&id)?;
         let language = language_for_path(id.path());
         let document = parse_with(source, &id.to_string(), &language)
@@ -88,10 +88,10 @@ fn parse_error_diagnostic(error: ParseError) -> dejavu_ir::Diagnostic {
 /// filesystem first, so the in-memory root only needs one stable, canonical
 /// path that keeps the source's extension (and therefore its language profile).
 #[must_use]
-pub fn layout_loader(layout_id: &str, source: &str) -> (document_template::MapTemplateLoader, TemplateId) {
+pub fn layout_loader(layout_id: &str, source: &str) -> (template::MapTemplateLoader, TemplateId) {
     let entry_path = layout_entry_path(layout_id);
-    let loader = document_template::MapTemplateLoader::new().with_root(
-        document_template::TemplateRoot::new("theme", 0).with_file(entry_path.as_str(), source),
+    let loader = template::MapTemplateLoader::new().with_root(
+        template::TemplateRoot::new("theme", 0).with_file(entry_path.as_str(), source),
     );
     (loader, TemplateId::new("theme", entry_path))
 }

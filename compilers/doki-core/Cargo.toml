@@ -9,9 +9,9 @@ publish = false
 [dependencies]
 dejavu = { workspace = true }
 dejavu-ir = { workspace = true }
-document-template = { workspace = true }
-document-template-framework = { workspace = true }
-document-template-input-dejavu = { workspace = true }
+template = { workspace = true }
+template-framework = { workspace = true }
+template-input-dejavu = { workspace = true }
 figment = { workspace = true }
 hex = { workspace = true }
 miette = { workspace = true }
