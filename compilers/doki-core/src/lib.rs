@@ -41,7 +41,10 @@ pub use render::{
     DEFAULT_LAYOUT,
 };
 pub use session::BuildSession;
-pub use template::{DokiFramework, DOKI_FRAMEWORK_CONTRACT, DOKI_FRAMEWORK_ENGINES, DOKI_FRAMEWORK_ID};
+pub use template::{
+    DokiFramework, layout_loader, layout_options, render_layout_source, DOKI_FRAMEWORK_CONTRACT,
+    DOKI_FRAMEWORK_ENGINES, DOKI_FRAMEWORK_ID,
+};
 pub use site::{
     PageType, SiteModel, SitePage, TagEntry, TaxonomyView, INVALID_LOCALE_CODE, INVALID_TYPE_CODE,
     ROUTE_CONFLICT_CODE, TAGS_INDEX_ID, TAXONOMY_CONFLICT_CODE,

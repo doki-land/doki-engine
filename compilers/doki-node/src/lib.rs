@@ -6,6 +6,7 @@
 
 mod error;
 mod registry;
+mod template;
 
 use std::sync::OnceLock;
 

@@ -106,3 +106,46 @@ fn layout_entry_path(layout_id: &str) -> String {
 pub fn layout_options() -> RenderOptions {
     RenderOptions::default()
 }
+
+/// Render one layout source without host extensions (no i18n registry).
+///
+/// This is the FFI-facing entry: the caller supplies the already-resolved layout
+/// source and its identity, Doki's framework resolves the entry in an in-memory
+/// root and delegates parsing/rendering to `template.input.dejavu`.
+pub fn render_layout_source(
+    layout_id: &str,
+    source: &str,
+    data: &serde_json::Value,
+    strict_undefined: bool,
+) -> Result<FrameworkOutput, TemplateError> {
+    let (loader, entry) = layout_loader(layout_id, source);
+    let framework = DokiFramework { custom: None };
+    let options = RenderOptions { strict_undefined, ..RenderOptions::default() };
+    framework.render(&FrameworkRequest {
+        entry: &entry.to_string(),
+        loader: &loader,
+        data,
+        options: &options,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn layout_render_delegates_to_the_dejavu_engine() {
+        let output = render_layout_source("page.doki", "{% page.title %}", &json!({ "page": { "title": "Hi" } }), false)
+            .expect("render");
+        assert_eq!(output.text, "Hi");
+        assert_eq!(output.dependencies.len(), 1);
+    }
+
+    #[test]
+    fn layout_render_keeps_the_dejavu_error_code() {
+        let error = render_layout_source("page.doki", "{% page.title %}", &json!({ "page": {} }), true)
+            .expect_err("strict should fail");
+        assert_eq!(error.code(), "dejavu.template.undefined-member");
+    }
+}
