@@ -15,10 +15,9 @@
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
-use dejavu::{Dejavu, Language, TemplateConfig};
-use dejavu_ir::{
-    Capability, CustomEntry, CustomError, CustomRegistry, Namespace, RenderOptions, render_ir_opts,
-};
+use dejavu::{Language, TemplateConfig};
+use dejavu_ir::{Capability, CustomEntry, CustomError, CustomRegistry, Namespace};
+use document_template_framework::{FrameworkRequest, TemplateFramework};
 use notedown_formats::export::html::export_html;
 use notedown_formats::import::markdown::import_markdown_bytes;
 use notedown_ir::{Block, DocumentGraph, Inline, RelationEndpoint};
@@ -30,6 +29,7 @@ use crate::error::{CoreError, CoreResult};
 use crate::graph::ContentNode;
 use crate::i18n::I18n;
 use crate::site::{PageType, SiteModel, SitePage, TaxonomyView};
+use crate::template::{DokiFramework, layout_loader, layout_options};
 
 /// Built-in layout when no theme file is found (Dejavu default `<% %>` delimiters).
 ///
@@ -189,14 +189,13 @@ impl CustomRegistry for I18nRegistry<'_> {
     }
 }
 
-/// Parse and render one layout source with the i18n host registry attached.
+/// Parse and render one layout source through `template.framework.doki`.
 ///
 /// Failures keep the historical message shape (page rel path plus layout
 /// identity) so diagnostics name both the layout and the page.
 fn render_layout(
     layout_source: &str,
     ctx: &Value,
-    language: &Language,
     layout_id: &str,
     page_rel: &str,
     i18n: &I18n,
@@ -207,16 +206,20 @@ fn render_layout(
             "doki render failed for `{page_rel}` (layout {layout_id}): {detail}"
         ))
     };
-    let doc = Dejavu::parse_with(layout_source, language).map_err(|e| failure(e.to_string()))?;
     let registry = I18nRegistry::new(i18n, locale);
-    let options = RenderOptions {
-        name: Some(layout_id.to_string()),
-        custom: Some(&registry),
-        ..RenderOptions::default()
-    };
-    let html = render_ir_opts(&doc, ctx, options, None).map_err(|e| failure(e.to_string()))?;
+    let framework = DokiFramework { custom: Some(&registry) };
+    let (loader, entry) = layout_loader(layout_id, layout_source);
+    let options = layout_options();
+    let output = framework
+        .render(&FrameworkRequest {
+            entry: &entry.to_string(),
+            loader: &loader,
+            data: ctx,
+            options: &options,
+        })
+        .map_err(|e| failure(e.to_string()))?;
     Ok(RenderedPage {
-        html,
+        html: output.text,
         layout_id: layout_id.to_string(),
         diagnostics: registry.into_diagnostics(),
     })
@@ -247,7 +250,7 @@ pub fn render_page(
         .page(&node.rel_path)
         .ok_or_else(|| CoreError::build(format!("no site page for `{}`", node.rel_path)))?;
     let content_html = markdown_to_html(&node.body, Some((site, node.rel_path.as_str())))?;
-    let (layout_source, layout_id, layout_ext) = resolve_layout(
+    let (layout_source, layout_id, _layout_ext) = resolve_layout(
         project_root,
         config.theme.as_ref(),
         theme_root,
@@ -292,11 +295,9 @@ pub fn render_page(
         "content": content_html,
     });
 
-    let language = language_for_ext(layout_ext.as_deref());
     render_layout(
         &layout_source,
         &ctx,
-        &language,
         &layout_id,
         &node.rel_path,
         i18n,
@@ -326,7 +327,7 @@ pub fn render_taxonomy_page(
         TaxonomyView::TagIndex(_) => &["tags", "page"],
         TaxonomyView::Tag { .. } => &["tag", "page"],
     };
-    let (layout_source, layout_id, layout_ext) =
+    let (layout_source, layout_id, _layout_ext) =
         resolve_layout(project_root, config.theme.as_ref(), theme_root, names)?;
 
     let title = page.title.clone().unwrap_or_else(|| config.title.clone());
@@ -366,11 +367,9 @@ pub fn render_taxonomy_page(
         "content": "",
     });
 
-    let language = language_for_ext(layout_ext.as_deref());
     render_layout(
         &layout_source,
         &ctx,
-        &language,
         &layout_id,
         &page.rel_path,
         i18n,
