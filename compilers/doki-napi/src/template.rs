@@ -7,7 +7,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde_json::{json, Value};
 
-use doki_core::{render_layout_source, DokiFramework, DOKI_FRAMEWORK_ID};
+use template_framework_doki::{render_layout_source, DokiFramework, DOKI_FRAMEWORK_ID};
 
 /// 本绑定暴露的 framework 能力与可驱动的输入引擎。
 #[napi]

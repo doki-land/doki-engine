@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use doki_core::{
+use template_framework_doki::{
     discover_markdown_content, language_for_ext, parse_document, render_page, BuildMode,
     BuildPhase, BuildSession, ContentId, ContentKind, ContentNode, ExtensionRef, FrontMatterDto,
     LoadOptions, ProjectConfig, SiteModel, TaxonomyView, MISSING_KEY_CODE, TAGS_INDEX_ID,
@@ -29,15 +29,15 @@ fn node_from_md(rel: &str, source: &str) -> ContentNode {
     }
 }
 
-fn site_model(node: &ContentNode) -> (SiteModel, Vec<doki_core::Diagnostic>) {
-    let mut graph = doki_core::ContentGraph::default();
+fn site_model(node: &ContentNode) -> (SiteModel, Vec<template_framework_doki::Diagnostic>) {
+    let mut graph = template_framework_doki::ContentGraph::default();
     graph.insert(node.clone());
     SiteModel::build(&graph, false, "en")
 }
 
-fn single_i18n() -> doki_core::I18n {
+fn single_i18n() -> template_framework_doki::I18n {
     let dir = tempfile::tempdir().unwrap();
-    doki_core::I18n::load(dir.path(), &ProjectConfig::default()).0
+    template_framework_doki::I18n::load(dir.path(), &ProjectConfig::default()).0
 }
 
 fn theme_cfg() -> ProjectConfig {
@@ -550,7 +550,7 @@ fn bilingual_session_build_prefixes_locale_routes_and_carries_missing_key_warnin
     let mut session = BuildSession::open_project(dir.path(), LoadOptions::default()).unwrap();
     let plan = session.prepare_build(BuildMode::Production).unwrap();
     assert_eq!(plan.phase, BuildPhase::ReadyToCommit);
-    let missing: Vec<&doki_core::Diagnostic> = plan
+    let missing: Vec<&template_framework_doki::Diagnostic> = plan
         .diagnostics
         .iter()
         .filter(|d| d.code == MISSING_KEY_CODE)

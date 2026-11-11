@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use doki_core::{
+use template_framework_doki::{
     BuildMode, BuildSession, FileChange, LoadOptions, PluginResult, ResolvedExtension,
 };
 use parking_lot::Mutex;

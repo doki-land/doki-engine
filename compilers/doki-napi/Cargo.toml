@@ -1,16 +1,16 @@
 [package]
-name = "doki-node"
+name = "doki-napi"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Thin N-API binding for doki-core (opaque session ids + JSON; no business semantics)"
+description = "Pure N-API export for the template.framework.doki implementation"
 publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-doki-core = { path = "../doki-core" }
+template-framework-doki = { git = "https://github.com/notedge/document.rs", rev = "30482365ec3a7ec133f33a3c03391b8f6c2c54b6" }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 serde = { workspace = true }

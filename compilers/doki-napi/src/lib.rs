@@ -45,7 +45,7 @@ pub fn open_project(
 /// Peek theme declaration from doki.toml (JSON: `{ path?, package? }` or null).
 #[napi]
 pub fn peek_theme(root: String) -> Result<Value> {
-    let theme = doki_core::peek_theme_ref(&root)
+    let theme = template_framework_doki::peek_theme_ref(&root)
         .map_err(|e| NodeError::invalid(e.to_string()))?;
     Ok(serde_json::to_value(theme).expect("theme serialize"))
 }
@@ -54,7 +54,7 @@ pub fn peek_theme(root: String) -> Result<Value> {
 #[napi]
 pub fn find_theme_defaults(theme_root: String) -> Result<Option<String>> {
     Ok(
-        doki_core::theme_defaults_file(&theme_root).map(|p| p.to_string_lossy().into_owned()),
+        template_framework_doki::theme_defaults_file(&theme_root).map(|p| p.to_string_lossy().into_owned()),
     )
 }
 

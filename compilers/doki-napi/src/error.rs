@@ -12,11 +12,11 @@ impl NodeError {
         }
     }
 
-    pub fn from_core(err: doki_core::CoreError) -> Self {
+    pub fn from_core(err: template_framework_doki::CoreError) -> Self {
         // Prefer chain so Figment extract reasons reach the CLI.
         let message = match &err {
-            doki_core::CoreError::Config(cfg) => match cfg {
-                doki_core::ConfigError::Extract { source } => {
+            template_framework_doki::CoreError::Config(cfg) => match cfg {
+                template_framework_doki::ConfigError::Extract { source } => {
                     format!("invalid project configuration: {source}")
                 }
                 other => other.to_string(),

@@ -11,9 +11,9 @@
         "index.d.ts"
     ],
     "scripts": {
-        "build": "napi build --platform --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
-        "build:debug": "napi build --platform --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
-        "build:release": "napi build --platform --release --manifest-path ../../Cargo.toml --package doki-node --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+        "build": "napi build --platform --manifest-path ../../Cargo.toml --package doki-napi --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+        "build:debug": "napi build --platform --manifest-path ../../Cargo.toml --package doki-napi --output-dir . && node ../../scripts/patch-napi-loader.mjs",
+        "build:release": "napi build --platform --release --manifest-path ../../Cargo.toml --package doki-napi --output-dir . && node ../../scripts/patch-napi-loader.mjs",
         "test": "node --test test/*.test.cjs",
         "pack:smoke": "node ./scripts/pack-smoke.mjs",
         "artifacts": "napi artifacts"

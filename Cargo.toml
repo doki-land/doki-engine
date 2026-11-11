@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["compilers/doki-core", "compilers/doki-node"]
-default-members = ["compilers/doki-core", "compilers/doki-node"]
+members = ["compilers/doki-napi"]
+default-members = ["compilers/doki-napi"]
 
 [workspace.package]
 version = "0.0.0"
